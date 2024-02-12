@@ -208,7 +208,24 @@ void VGG16(engine::kind engine_kind){
 
     // -----------------------------------------------------------
     // max pooling layer 1: 112x112x64
-    
+    // 224x224x64 -> 112x112x64
+    memory::dims pool1_dst_tz = {batch, 64, 112, 112};
+    memory::dims pool1_kernel = {2, 2};
+    memory::dims pool1_strides = {2, 2};
+    memory::dims pool_padding = {0, 0};
+        
+    auto pool1_dst_md = memory::desc({pool1_dst_tz}, dt::f32, tag::any);
+
+    // Create pooling primitive
+    auto pool1_desc = pooling_forward::desc(prop_kind::forward_inference,
+            algorithm::pooling_max, conv2_dst_memory.get_desc(), pool1_dst_md,
+            pool1_strides, pool1_kernel, pool_padding, pool_padding);
+    auto pool1_pd = pooling_forward::primitive_desc(pool1_desc, eng);
+    auto pool1_dst_memory = memory(pool1_pd.dst_desc(), eng);
+
+    net.push_back(pooling_forward(pool1_pd));
+    net_args.push_back({{DNNL_ARG_SRC, conv2_dst_memory},
+            {DNNL_ARG_DST, pool1_dst_memory}});
 
     // -----------------------------------------------------------
     // convolutional layer 3: 112x112x128
