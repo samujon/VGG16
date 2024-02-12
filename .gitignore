@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+
+# Not used C++ files
+cnn_inference*
+getting_started*
+gettingstarted
