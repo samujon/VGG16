@@ -57,13 +57,65 @@ void VGG16(engine::kind engine_kind){
     memory::dims conv1_padding = {padding, padding};
 
     // Allocate buffers for input data and weights, and create memory descriptors
-    std::vector<float> conv1_src(batch * input_channels * input_H * input_W);
+    std::vector<float> user_src(batch * input_channels * input_H * input_W);
+    std::vector<float> user_dst(batch * 64 * input_H * input_W);
     std::vector<float> conv1_weights(product(conv1_weights_tz));
     std::vector<float> conv1_bias(product(conv1_bias_tz));
-    std::vector<float> conv1_dst(batch * 64 * input_H * input_W);
+
+    // Create user memory
+    auto user_src_memory = memory({{conv1_src_tz}, dt::f32, tag::nchw}, eng);
+    write_to_dnnl_memory(user_src.data(), user_src_memory);
+    auto user_weights_memory
+            = memory({{conv1_weights_tz}, dt::f32, tag::oihw}, eng);
+    write_to_dnnl_memory(conv1_weights.data(), user_weights_memory);
+    auto conv1_user_bias_memory
+            = memory({{conv1_bias_tz}, dt::f32, tag::x}, eng);
+    write_to_dnnl_memory(conv1_bias.data(), conv1_user_bias_memory);
+
+    // Create convolution memory descriptors with format_tag::any
+    auto conv1_src_md = memory::desc({conv1_src_tz}, dt::f32, tag::any);
+    auto conv1_weights_md = memory::desc({conv1_weights_tz}, dt::f32, tag::any);
+    auto conv1_bias_md = memory::desc({conv1_bias_tz}, dt::f32, tag::any);
+    auto conv1_dst_md = memory::desc({conv1_dst_tz}, dt::f32, tag::any);
+
+    // Create convolution descriptor
+    auto conv1_desc = convolution_forward::desc(prop_kind::forward_inference,
+        algorithm::convolution_direct, conv1_src_md, conv1_weights_md,
+        conv1_dst_md, conv1_strides, conv1_padding, conv1_padding);
+
+    // Create convolution primitive descriptor 
+    auto conv1_prim_desc = convolution_forward::primitive_desc(conv1_desc, eng);
+
+    // Check if data and weights format required by convolution is different 
+    // from the user format, if so reorder the memory layout
+    auto conv1_src_memory = user_src_memory;
+    if (conv1_prim_desc.src_desc() != user_src_memory.get_desc()) {
+        conv1_src_memory = memory(conv1_prim_desc.src_desc(), eng);
+        net.push_back(reorder(user_src_memory, conv1_src_memory));
+        net_args.push_back({{DNNL_ARG_FROM, user_src_memory},
+                {DNNL_ARG_TO, conv1_src_memory}});
+    }
+
+    auto conv1_weights_memory = user_weights_memory;
+    if (conv1_prim_desc.weights_desc() != user_weights_memory.get_desc()) {
+        conv1_weights_memory = memory(conv1_prim_desc.weights_desc(), eng);
+        reorder(user_weights_memory, conv1_weights_memory)
+                .execute(s, user_weights_memory, conv1_weights_memory);
+    }
+
+    // Create memory for output
+    auto conv1_dst_memory = memory(conv1_prim_desc.dst_desc(),eng);
+
+    // Create the convolution primitive
+    net.push_back(convolution_forward(conv1_prim_desc));
+    net_args.push_back({{DNNL_ARG_SRC, conv1_src_memory},
+            {DNNL_ARG_WEIGHTS, conv1_weights_memory},
+            {DNNL_ARG_BIAS, conv1_user_bias_memory},
+            {DNNL_ARG_DST, conv1_dst_memory}});
 
 
     // convolutional layer 2: 224x224x64
+    
     // max pooling layer 1: 112x112x64
     // convolutional layer 3: 112x112x128
     // convolutional layer 4: 112x112x128
@@ -83,6 +135,7 @@ void VGG16(engine::kind engine_kind){
     // fully connected layer 1: 4096
     // fully connected layer 2: 4096
     // softmax layer: 1000
+
 
 
 
