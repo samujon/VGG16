@@ -209,7 +209,7 @@ void VGG16(engine::kind engine_kind){
     // -----------------------------------------------------------
     // max pooling layer 1: 112x112
     // 224x224 -> 112x112
-    memory::dims pool1_dst_tz = {batch, 64, 112, 112};
+    memory::dims pool1_dst_tz = {batch, 128, 112, 112};
     memory::dims pool1_kernel = {2, 2};
     memory::dims pool1_strides = {2, 2};
     memory::dims pool_padding = {0, 0};
@@ -229,7 +229,7 @@ void VGG16(engine::kind engine_kind){
 
     // -----------------------------------------------------------
     // convolutional layer 3: 112x112x128
-    memory::dims conv3_src_tz = {batch, 64, 112, 112};
+    memory::dims conv3_src_tz = {batch, 128, 112, 112};
     memory::dims conv3_weights_tz = {128, 64, 3, 3};
     memory::dims conv3_bias_tz = {128};
     memory::dims conv3_dst_tz = {batch, 128, 112, 112};
@@ -381,7 +381,7 @@ void VGG16(engine::kind engine_kind){
     // -----------------------------------------------------------
     // max pooling layer 2: 56x56
     // 112x112 -> 56x56
-    memory::dims pool2_dst_tz = {batch, 128, 56, 56};
+    memory::dims pool2_dst_tz = {batch, 256, 56, 56};
     memory::dims pool2_kernel = {2, 2};
     memory::dims pool2_strides = {2, 2};
     memory::dims pool_padding = {0, 0};
@@ -402,9 +402,78 @@ void VGG16(engine::kind engine_kind){
 
     // -----------------------------------------------------------
     // convolutional layer 5: 56x56x256
+    memory::dims conv5_src_tz = {batch, 256, 56, 56};
+    memory::dims conv5_weights_tz = {256, 256, 3, 3};
+    memory::dims conv5_bias_tz = {256};
+    memory::dims conv5_dst_tz = {batch, 256, 56, 56};
+    memory::dims conv5_strides = {conv_stride, conv_stride};
+    memory::dims conv5_padding = {padding, padding};
+
+    std::vector<float> conv5_weights(product(conv5_weights_tz));
+    std::vector<float> conv5_bias(product(conv5_bias_tz));
+
+    // Create user memory
+    auto conv5_user_weights_memory
+            = memory({{conv5_weights_tz}, dt::f32, tag::oihw}, eng);
+    write_to_dnnl_memory(conv5_weights.data(), conv5_user_weights_memory);
+    auto conv5_user_bias_memory
+            = memory({{conv5_bias_tz}, dt::f32, tag::x}, eng);
+    write_to_dnnl_memory(conv5_bias.data(), conv5_user_bias_memory);
+
+    // Create convolution memory descriptors with format_tag::any
+    auto conv5_src_md = memory::desc({conv5_src_tz}, dt::f32, tag::any);
+    auto conv5_weights_md = memory::desc({conv5_weights_tz}, dt::f32, tag::any);
+    auto conv5_bias_md = memory::desc({conv5_bias_tz}, dt::f32, tag::any);
+    auto conv5_dst_md = memory::desc({conv5_dst_tz}, dt::f32, tag::any);
+
+    // Create convolution descriptor
+    auto conv5_desc = convolution_forward::desc(prop_kind::forward_inference,
+        algorithm::convolution_direct, conv5_src_md, conv5_weights_md,
+        conv5_bias_md, conv5_dst_md, conv5_strides, conv5_padding, conv5_padding);
+
+    // Create convolution primitive descriptor 
+    auto conv5_prim_desc = convolution_forward::primitive_desc(conv5_desc, eng);
+
+    // Check if data and weights format required by convolution is different 
+    // from the user format, if so reorder the memory layout
+    auto conv5_src_memory = pool2_dst_memory;
+    if (conv5_prim_desc.src_desc() != conv5_src_memory.get_desc()) {
+        conv5_src_memory = memory(conv5_prim_desc.src_desc(), eng);
+        net.push_back(reorder(pool2_dst_memory, conv5_src_memory));
+        net_args.push_back({{DNNL_ARG_FROM, pool2_dst_memory},
+                {DNNL_ARG_TO, conv5_src_memory}});
+    }
+
+    auto conv5_weights_memory = conv5_user_weights_memory;
+    if (conv5_prim_desc.weights_desc() != conv5_user_weights_memory.get_desc()) {
+        conv5_weights_memory = memory(conv5_prim_desc.weights_desc(), eng);
+        reorder(conv5_user_weights_memory, conv5_weights_memory)
+                .execute(s, conv5_user_weights_memory, conv5_weights_memory);
+    }
+
+    // Create memory for output
+    auto conv5_dst_memory = memory(conv5_prim_desc.dst_desc(),eng);
+
+    // Create the convolution primitive
+    net.push_back(convolution_forward(conv5_prim_desc));
+    net_args.push_back({{DNNL_ARG_SRC, conv5_src_memory},
+            {DNNL_ARG_WEIGHTS, conv5_weights_memory},
+            {DNNL_ARG_BIAS, conv5_user_bias_memory},
+            {DNNL_ARG_DST, conv5_dst_memory}});
 
     // -----------------------------------------------------------
     // ReLu5
+    const float negative5_slope = 0.0f;
+
+    // Create ReLu primitive
+    auto relu5_desc = eltwise_forward::desc(prop_kind::forward_inference,
+            algorithm::eltwise_relu, conv5_dst_memory.get_desc(),
+            negative5_slope);
+    auto relu5_prim_desc = eltwise_forward::primitive_desc(relu5_desc, eng);
+
+    net.push_back(eltwise_forward(relu5_prim_desc));
+    net_args.push_back({{DNNL_ARG_SRC, conv5_dst_memory},
+            {DNNL_ARG_DST, conv5_dst_memory}});
 
     // -----------------------------------------------------------
     // convolutional layer 6: 56x56x256
