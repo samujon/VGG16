@@ -28,6 +28,7 @@ by max-pooling). Max-pooling is performed over a 2 × 2 pixel window, with strid
 // In comparison with AlexNet, VGG16 does not LRN, local response normalization
 // VGG16 D configuration
 void VGG16(engine::kind engine_kind){
+        std::cout << "Entered VGG16" << std::endl;
         using tag = memory::format_tag;
         using dt = memory::data_type;   
         // Create an engine
@@ -35,6 +36,7 @@ void VGG16(engine::kind engine_kind){
         stream s(eng);
 
         //Create network
+        std::cout << "Create network" << std::endl;
         std::vector<primitive> net;
         std::vector<std::unordered_map<int, memory>> net_args;
 
@@ -51,6 +53,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // convolutional layer 1: 224x224x64
+        std::cout << "convolutional layer 1" << std::endl;
         memory::dims conv1_src_tz = {batch, input_channels, input_H, input_W};
         memory::dims conv1_weights_tz = {64, input_channels, 3, 3};
         memory::dims conv1_bias_tz = {64};
@@ -117,6 +120,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu1
+        std::cout << "ReLu1" << std::endl;
         const float negative1_slope = 0.0f;
 
         // Create ReLu primitive
@@ -131,7 +135,8 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // convolutional layer 2: 224x224x64
-        memory::dims conv2_src_tz = {batch, input_channels, input_H, input_W};
+        std::cout << "convolutional layer 2" << std::endl;
+        memory::dims conv2_src_tz = {batch, 64, input_H, input_W};
         memory::dims conv2_weights_tz = {64, input_channels, 3, 3};
         memory::dims conv2_bias_tz = {64};
         memory::dims conv2_dst_tz = {batch, 64, input_H, input_W};
@@ -194,6 +199,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu2
+        std::cout << "ReLu2" << std::endl;
         const float negative2_slope = 0.0f;
 
         // Create ReLu primitive
@@ -209,6 +215,7 @@ void VGG16(engine::kind engine_kind){
         // -----------------------------------------------------------
         // max pooling layer 1: 112x112
         // 224x224 -> 112x112
+        std::cout << "max pooling layer 1" << std::endl;
         memory::dims pool1_dst_tz = {batch, 128, 112, 112};
         memory::dims pool1_kernel = {2, 2};
         memory::dims pool1_strides = {2, 2};
@@ -229,6 +236,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // convolutional layer 3: 112x112x128
+        std::cout << "convolutional layer 3" << std::endl;
         memory::dims conv3_src_tz = {batch, 128, 112, 112};
         memory::dims conv3_weights_tz = {128, 64, 3, 3};
         memory::dims conv3_bias_tz = {128};
@@ -290,6 +298,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu3
+        std::cout << "ReLu3" << std::endl;
         const float negative3_slope = 0.0f;
 
         // Create ReLu primitive
@@ -304,6 +313,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // Convolutional layer 4: 112x112x128
+        std::cout << "convolutional layer 4" << std::endl;
         memory::dims conv4_src_tz = {batch, 128, 112, 112};
         memory::dims conv4_weights_tz = {128, 128, 3, 3}; 
         memory::dims conv4_bias_tz = {128};
@@ -366,6 +376,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu4
+        std::cout << "ReLu4" << std::endl;
         const float negative4_slope = 0.0f;
 
         // Create ReLu primitive
@@ -381,6 +392,7 @@ void VGG16(engine::kind engine_kind){
         // -----------------------------------------------------------
         // max pooling layer 2: 56x56
         // 112x112 -> 56x56
+        std::cout << "max pooling layer 2" << std::endl;
         memory::dims pool2_dst_tz = {batch, 256, 56, 56};
         memory::dims pool2_kernel = {2, 2};
         memory::dims pool2_strides = {2, 2};
@@ -401,6 +413,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // convolutional layer 5: 56x56x256
+        std::cout << "convolutional layer 5" << std::endl;
         memory::dims conv5_src_tz = {batch, 256, 56, 56};
         memory::dims conv5_weights_tz = {256, 256, 3, 3};
         memory::dims conv5_bias_tz = {256};
@@ -462,6 +475,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu5
+        std::cout << "ReLu5" << std::endl;
         const float negative5_slope = 0.0f;
 
         // Create ReLu primitive
@@ -476,6 +490,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // convolutional layer 6: 56x56x256
+        std::cout << "convolutional layer 6" << std::endl;
         memory::dims conv6_src_tz = {batch, 256, 56, 56};
         memory::dims conv6_weights_tz = {256, 256, 3, 3};
         memory::dims conv6_bias_tz = {256};
@@ -537,6 +552,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu6
+        std::cout << "ReLu6" << std::endl;
         const float negative6_slope = 0.0f;
 
         // Create ReLu primitive
@@ -551,6 +567,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // convolutional layer 7: 56x56x256
+        std::cout << "convolutional layer 7" << std::endl;
         memory::dims conv7_src_tz = {batch, 256, 56, 56};
         memory::dims conv7_weights_tz = {256, 256, 3, 3};
         memory::dims conv7_bias_tz = {256};
@@ -612,6 +629,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu7
+        std::cout << "ReLu7" << std::endl;
         const float negative7_slope = 0.0f;
 
         // Create ReLu primitive
@@ -627,6 +645,7 @@ void VGG16(engine::kind engine_kind){
         // -----------------------------------------------------------
         // max pooling layer 3: 28x28x512
         // 56x56 -> 28x28
+        std::cout << "max pooling layer 3" << std::endl;
         memory::dims pool3_dst_tz = {batch, 512, 28, 28};
         memory::dims pool3_kernel = {2, 2};
         memory::dims pool3_strides = {2, 2};
@@ -646,6 +665,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // convolutional layer 8: 28x28x512
+        std::cout << "convolutional layer 8" << std::endl;
         memory::dims conv8_src_tz = {batch, 512, 28, 28};
         memory::dims conv8_weights_tz = {512, 512, 3, 3};
         memory::dims conv8_bias_tz = {512};
@@ -707,6 +727,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu8
+        std::cout << "ReLu8" << std::endl;
         const float negative8_slope = 0.0f;
 
         // Create ReLu primitive
@@ -722,6 +743,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // convolutional layer 9: 28x28x512
+        std::cout << "convolutional layer 9" << std::endl;
         memory::dims conv9_src_tz = {batch, 512, 28, 28};
         memory::dims conv9_weights_tz = {512, 512, 3, 3};
         memory::dims conv9_bias_tz = {512};
@@ -783,6 +805,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu9
+        std::cout << "ReLu9" << std::endl;
         const float negative9_slope = 0.0f;
 
         // Create ReLu primitive
@@ -798,6 +821,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // convolutional layer 10: 28x28x512
+        std::cout << "convolutional layer 10" << std::endl;
         memory::dims conv10_src_tz = {batch, 512, 28, 28};
         memory::dims conv10_weights_tz = {512, 512, 3, 3};
         memory::dims conv10_bias_tz = {512};
@@ -859,6 +883,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu10
+        std::cout << "ReLu10" << std::endl;
         const float negative10_slope = 0.0f;
 
         // Create ReLu primitive
@@ -874,6 +899,7 @@ void VGG16(engine::kind engine_kind){
         // -----------------------------------------------------------
         // max pooling layer 4: 14x14x512
         // 28x28 -> 14x14
+        std::cout << "max pooling layer 4" << std::endl;
         memory::dims pool4_dst_tz = {batch, 512, 14, 14};
         memory::dims pool4_kernel = {2, 2};
         memory::dims pool4_strides = {2, 2};
@@ -893,6 +919,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // convolutional layer 11: 14x14x512
+        std::cout << "convolutional layer 11" << std::endl;
         memory::dims conv11_src_tz = {batch, 512, 14, 14};
         memory::dims conv11_weights_tz = {512, 512, 3, 3};
         memory::dims conv11_bias_tz = {512};
@@ -954,6 +981,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu11
+        std::cout << "ReLu11" << std::endl;
         const float negative11_slope = 0.0f;
 
         // Create ReLu primitive
@@ -968,6 +996,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // convolutional layer 12: 14x14x512
+        std::cout << "convolutional layer 12" << std::endl;
         memory::dims conv12_src_tz = {batch, 512, 14, 14};
         memory::dims conv12_weights_tz = {512, 512, 3, 3};
         memory::dims conv12_bias_tz = {512};
@@ -1030,6 +1059,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu12
+        std::cout << "ReLu12" << std::endl;
         const float negative12_slope = 0.0f;
 
         // Create ReLu primitive
@@ -1105,6 +1135,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu13
+        std::cout << "ReLu13" << std::endl;
         const float negative13_slope = 0.0f;
 
         // Create ReLu primitive
@@ -1119,6 +1150,8 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // max pooling layer 5: 7x7x512
+        // 14x14 -> 7x7
+        std::cout << "max pooling layer 5" << std::endl;
         memory::dims pool5_dst_tz = {batch, 512, 7, 7};
         memory::dims pool5_kernel = {2, 2};
         memory::dims pool5_strides = {2, 2};
@@ -1138,6 +1171,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // fully connected layer 1: 4096
+        std::cout << "fully connected layer 1" << std::endl;
         memory::dims fc1_src_tz = {batch, 512, 7, 7};
         memory::dims fc1_weights_tz = {4096, 512*7*7};
         memory::dims fc1_bias_tz = {4096};
@@ -1184,6 +1218,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu14
+        std::cout << "ReLu14" << std::endl;
         const float negative14_slope = 0.0f;
 
         // Create ReLu primitive
@@ -1198,6 +1233,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // fully connected layer 2: 4096
+        std::cout << "fully connected layer 2" << std::endl;
         memory::dims fc2_src_tz = {batch, 4096};
         memory::dims fc2_weights_tz = {4096, 4096};
         memory::dims fc2_bias_tz = {4096};
@@ -1244,6 +1280,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu15
+        std::cout << "ReLu15" << std::endl;
         const float negative15_slope = 0.0f;
 
         // Create ReLu primitive
@@ -1304,6 +1341,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // ReLu16
+        std::cout << "ReLu16" << std::endl;
         const float negative16_slope = 0.0f;
 
         // Create ReLu primitive
@@ -1319,6 +1357,7 @@ void VGG16(engine::kind engine_kind){
 
         // -----------------------------------------------------------
         // Softmax
+        std::cout << "Softmax" << std::endl;
         auto softmax_desc = softmax_forward::desc(prop_kind::forward_inference,
         fc3_dst_memory.get_desc(), 1);
         auto softmax_prim_desc = softmax_forward::primitive_desc(softmax_desc, eng);
@@ -1351,4 +1390,5 @@ int main(int argc, char **argv) {
                 std::chrono::steady_clock::now().time_since_epoch())
                 .count();
         std::cout << "End time: " << end << std::endl;
+        std::cout << "Total time:" << end - begin << std::endl;
 }
