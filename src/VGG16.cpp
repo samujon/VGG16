@@ -160,20 +160,17 @@ void VGG16(engine::kind engine_kind){
         auto conv2_weights_md = memory::desc({conv2_weights_tz}, dt::f32, tag::any);
         auto conv2_bias_md = memory::desc({conv2_bias_tz}, dt::f32, tag::any);
         auto conv2_dst_md = memory::desc({conv2_dst_tz}, dt::f32, tag::any);
-        std::cout << "memory descriptors" << std::endl;
 
         // Create convolution descriptor
         auto conv2_desc = convolution_forward::desc(prop_kind::forward_inference,
         algorithm::convolution_direct, conv2_src_md, conv2_weights_md,
         conv2_bias_md, conv2_dst_md, conv2_strides, conv2_padding, conv2_padding);
-        std::cout << "conv2_desc" << std::endl;
 
         // Create convolution primitive descriptor 
         auto conv2_prim_desc = convolution_forward::primitive_desc(conv2_desc, eng);
 
         // Check if data and weights format required by convolution is different 
         // from the user format, if so reorder the memory layout
-        std::cout << "memory layout" << std::endl;
         auto conv2_src_memory = conv1_dst_memory;
         if (conv2_prim_desc.src_desc() != conv2_src_memory.get_desc()) {
         conv2_src_memory = memory(conv2_prim_desc.src_desc(), eng);
@@ -181,7 +178,7 @@ void VGG16(engine::kind engine_kind){
         net_args.push_back({{DNNL_ARG_FROM, conv1_dst_memory},
                 {DNNL_ARG_TO, conv2_src_memory}});
         }
-        std::cout << "conv2_src_memory" << std::endl;
+
         auto conv2_weights_memory = conv2_user_weights_memory;
         if (conv2_prim_desc.weights_desc() != conv2_user_weights_memory.get_desc()) {
         conv2_weights_memory = memory(conv2_prim_desc.weights_desc(), eng);
@@ -218,7 +215,6 @@ void VGG16(engine::kind engine_kind){
         // -----------------------------------------------------------
         // max pooling layer 1: 112x112
         // 224x224 -> 112x112
-        std::cout << "max pooling layer 1" << std::endl;
         memory::dims pool1_dst_tz = {batch, 64, 112, 112};
         memory::dims pool1_kernel = {2, 2};
         memory::dims pool1_strides = {2, 2};
@@ -227,15 +223,13 @@ void VGG16(engine::kind engine_kind){
         auto pool1_dst_md = memory::desc({pool1_dst_tz}, dt::f32, tag::any);
 
         // Create pooling primitive
-        std::cout << "pooling primitive" << std::endl;
         auto pool1_desc = pooling_forward::desc(prop_kind::forward_inference,
         algorithm::pooling_max, conv2_dst_memory.get_desc(), pool1_dst_md,
         pool1_strides, pool1_kernel, pool_padding, pool_padding);
-        std::cout << "pool1_desc" << std::endl;
+
         auto pool1_pd = pooling_forward::primitive_desc(pool1_desc, eng);
         auto pool1_dst_memory = memory(pool1_pd.dst_desc(), eng);
 
-        std::cout << "pushing to net" << std::endl;
         net.push_back(pooling_forward(pool1_pd));
         net_args.push_back({{DNNL_ARG_SRC, conv2_dst_memory},
         {DNNL_ARG_DST, pool1_dst_memory}});
@@ -243,7 +237,7 @@ void VGG16(engine::kind engine_kind){
         // -----------------------------------------------------------
         // convolutional layer 3: 112x112x128
         std::cout << "convolutional layer 3" << std::endl;
-        memory::dims conv3_src_tz = {batch, 128, 112, 112};
+        memory::dims conv3_src_tz = {batch, 64, 112, 112};
         memory::dims conv3_weights_tz = {128, 64, 3, 3};
         memory::dims conv3_bias_tz = {128};
         memory::dims conv3_dst_tz = {batch, 128, 112, 112};
@@ -399,7 +393,7 @@ void VGG16(engine::kind engine_kind){
         // max pooling layer 2: 56x56
         // 112x112 -> 56x56
         std::cout << "max pooling layer 2" << std::endl;
-        memory::dims pool2_dst_tz = {batch, 256, 56, 56};
+        memory::dims pool2_dst_tz = {batch, 128, 56, 56};
         memory::dims pool2_kernel = {2, 2};
         memory::dims pool2_strides = {2, 2};
 
@@ -420,8 +414,8 @@ void VGG16(engine::kind engine_kind){
         // -----------------------------------------------------------
         // convolutional layer 5: 56x56x256
         std::cout << "convolutional layer 5" << std::endl;
-        memory::dims conv5_src_tz = {batch, 256, 56, 56};
-        memory::dims conv5_weights_tz = {256, 256, 3, 3};
+        memory::dims conv5_src_tz = {batch, 128, 56, 56};
+        memory::dims conv5_weights_tz = {256, 128, 3, 3};
         memory::dims conv5_bias_tz = {256};
         memory::dims conv5_dst_tz = {batch, 256, 56, 56};
         memory::dims conv5_strides = {conv_stride, conv_stride};
@@ -649,10 +643,10 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_DST, conv7_dst_memory}});
 
         // -----------------------------------------------------------
-        // max pooling layer 3: 28x28x512
+        // max pooling layer 3: 28x28x256
         // 56x56 -> 28x28
         std::cout << "max pooling layer 3" << std::endl;
-        memory::dims pool3_dst_tz = {batch, 512, 28, 28};
+        memory::dims pool3_dst_tz = {batch, 256, 28, 28};
         memory::dims pool3_kernel = {2, 2};
         memory::dims pool3_strides = {2, 2};
 
@@ -672,8 +666,8 @@ void VGG16(engine::kind engine_kind){
         // -----------------------------------------------------------
         // convolutional layer 8: 28x28x512
         std::cout << "convolutional layer 8" << std::endl;
-        memory::dims conv8_src_tz = {batch, 512, 28, 28};
-        memory::dims conv8_weights_tz = {512, 512, 3, 3};
+        memory::dims conv8_src_tz = {batch, 256, 28, 28};
+        memory::dims conv8_weights_tz = {512, 256, 3, 3};
         memory::dims conv8_bias_tz = {512};
         memory::dims conv8_dst_tz = {batch, 512, 28, 28};
         memory::dims conv8_strides = {conv_stride, conv_stride};
@@ -1185,24 +1179,29 @@ void VGG16(engine::kind engine_kind){
 
         std::vector<float> fc1_weights(product(fc1_weights_tz));
         std::vector<float> fc1_bias(product(fc1_bias_tz));
-
+        
+        std::cout << "set dims" << std::endl;
         // Create user memory
         auto fc1_user_weights_memory = memory({{fc1_weights_tz}, dt::f32, tag::nc}, eng);
         write_to_dnnl_memory(fc1_weights.data(), fc1_user_weights_memory);
         auto fc1_user_bias_memory = memory({{fc1_bias_tz}, dt::f32, tag::x}, eng);
         write_to_dnnl_memory(fc1_bias.data(), fc1_user_bias_memory);
 
+        std::cout << "set memory" << std::endl;
         // Create memory descriptors for convolution data
         auto fc1_src_md = memory::desc({fc1_src_tz}, dt::f32, tag::any);
         auto fc1_bias_md = memory::desc({fc1_bias_tz}, dt::f32, tag::any);
         auto fc1_weights_md = memory::desc({fc1_weights_tz}, dt::f32, tag::any);
         auto fc1_dst_md = memory::desc{{fc1_dst_tz}, dt::f32, tag::any};
 
+        std::cout << "set desc" << std::endl;
         // Create inner product (fully connected) descriptor
         auto fc1_desc = inner_product_forward::desc(prop_kind::forward_inference,
         fc1_src_md, fc1_weights_md, fc1_bias_md, fc1_dst_md);
+        std::cout << "set prim desc" << std::endl;
         auto fc1_prim_desc = inner_product_forward::primitive_desc(fc1_desc, eng);
 
+        std::cout << "set desc" << std::endl;
         // Check if reorder needed 
         auto fc1_src_memory = pool5_dst_memory;
         if (fc1_prim_desc.src_desc() != pool5_dst_memory.get_desc()) {
@@ -1211,7 +1210,7 @@ void VGG16(engine::kind engine_kind){
         net_args.push_back({{DNNL_ARG_FROM, pool5_dst_memory},
         {DNNL_ARG_TO, fc1_src_memory}});
         }
-
+        std::cout << "set src" << std::endl;
         // Create memory for output
         auto fc1_dst_memory = memory(fc1_prim_desc.dst_desc(), eng);
 
