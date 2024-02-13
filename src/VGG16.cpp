@@ -1121,6 +1121,23 @@ void VGG16(engine::kind engine_kind){
 
     // -----------------------------------------------------------
     // max pooling layer 5: 7x7x512
+    memory::dims pool5_dst_tz = {batch, 512, 7, 7};
+    memory::dims pool5_kernel = {2, 2};
+    memory::dims pool5_strides = {2, 2};
+    memory::dims pool_padding = {0, 0};
+        
+    auto pool5_dst_md = memory::desc({pool5_dst_tz}, dt::f32, tag::any);
+
+    // Create pooling primitive
+    auto pool5_desc = pooling_forward::desc(prop_kind::forward_inference,
+            algorithm::pooling_max, conv13_dst_memory.get_desc(), pool5_dst_md,
+            pool5_strides, pool5_kernel, pool_padding, pool_padding);
+    auto pool5_pd = pooling_forward::primitive_desc(pool5_desc, eng);
+    auto pool5_dst_memory = memory(pool5_pd.dst_desc(), eng);
+
+    net.push_back(pooling_forward(pool5_pd));
+    net_args.push_back({{DNNL_ARG_SRC, conv13_dst_memory},
+            {DNNL_ARG_DST, pool5_dst_memory}});
 
     // -----------------------------------------------------------
     // fully connected layer 1: 4096
