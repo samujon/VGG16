@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 #include "oneapi/dnnl/dnnl.hpp"
-#include "oneDNN/examples/example_utils.hpp"
+#include "/home/samjons/thesis/oneDNN/examples/example_utils.hpp"
 
 #include "VGG16.hpp"
 
@@ -384,7 +384,6 @@ void VGG16(engine::kind engine_kind){
         memory::dims pool2_dst_tz = {batch, 256, 56, 56};
         memory::dims pool2_kernel = {2, 2};
         memory::dims pool2_strides = {2, 2};
-        memory::dims pool_padding = {0, 0};
 
         auto pool2_dst_md = memory::desc({pool2_dst_tz}, dt::f32, tag::any);
 
@@ -631,7 +630,6 @@ void VGG16(engine::kind engine_kind){
         memory::dims pool3_dst_tz = {batch, 512, 28, 28};
         memory::dims pool3_kernel = {2, 2};
         memory::dims pool3_strides = {2, 2};
-        memory::dims pool_padding = {0, 0};
 
         auto pool3_dst_md = memory::desc({pool3_dst_tz}, dt::f32, tag::any);
 
@@ -879,7 +877,6 @@ void VGG16(engine::kind engine_kind){
         memory::dims pool4_dst_tz = {batch, 512, 14, 14};
         memory::dims pool4_kernel = {2, 2};
         memory::dims pool4_strides = {2, 2};
-        memory::dims pool_padding = {0, 0};
 
         auto pool4_dst_md = memory::desc({pool4_dst_tz}, dt::f32, tag::any);
 
@@ -1125,7 +1122,6 @@ void VGG16(engine::kind engine_kind){
         memory::dims pool5_dst_tz = {batch, 512, 7, 7};
         memory::dims pool5_kernel = {2, 2};
         memory::dims pool5_strides = {2, 2};
-        memory::dims pool_padding = {0, 0};
 
         auto pool5_dst_md = memory::desc({pool5_dst_tz}, dt::f32, tag::any);
 
@@ -1148,8 +1144,6 @@ void VGG16(engine::kind engine_kind){
         memory::dims fc1_dst_tz = {batch, 4096};
 
         std::vector<float> fc1_weights(product(fc1_weights_tz));
-        std::vector<float> fc1_bias(product(fc1_bias_tz));
-
         std::vector<float> fc1_bias(product(fc1_bias_tz));
 
         // Create user memory
@@ -1212,8 +1206,6 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> fc2_weights(product(fc2_weights_tz));
         std::vector<float> fc2_bias(product(fc2_bias_tz));
 
-        std::vector<float> fc2_bias(product(fc2_bias_tz));
-
         // Create user memory
         auto fc2_user_weights_memory = memory({{fc2_weights_tz}, dt::f32, tag::nc}, eng);
         write_to_dnnl_memory(fc2_weights.data(), fc2_user_weights_memory);
@@ -1274,8 +1266,6 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> fc3_weights(product(fc3_weights_tz));
         std::vector<float> fc3_bias(product(fc3_bias_tz));
 
-        std::vector<float> fc3_bias(product(fc3_bias_tz));
-
         // Create user memory
         auto fc3_user_weights_memory = memory({{fc3_weights_tz}, dt::f32, tag::nc}, eng);
         write_to_dnnl_memory(fc3_weights.data(), fc3_user_weights_memory);
@@ -1313,16 +1303,16 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_DST, fc3_dst_memory}});
 
         // -----------------------------------------------------------
-        // ReLu14
-        const float negative15_slope = 0.0f;
+        // ReLu16
+        const float negative16_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu15_desc = eltwise_forward::desc(prop_kind::forward_inference,
+        auto relu16_desc = eltwise_forward::desc(prop_kind::forward_inference,
         algorithm::eltwise_relu, fc3_dst_memory.get_desc(),
-        negative15_slope);
-        auto relu15_prim_desc = eltwise_forward::primitive_desc(relu15_desc, eng);
+        negative16_slope);
+        auto relu16_prim_desc = eltwise_forward::primitive_desc(relu15_desc, eng);
 
-        net.push_back(eltwise_forward(relu15_prim_desc));
+        net.push_back(eltwise_forward(relu16_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, fc3_dst_memory},
         {DNNL_ARG_DST, fc3_dst_memory}});
 
@@ -1351,6 +1341,14 @@ void VGG16(engine::kind engine_kind){
 }
 
 int main(int argc, char **argv) {
-        std::cout << "Starting VGG16 main function\n";
-        
+        std::cout << "Starting VGG16 main function" << std::endl;
+        auto begin = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count();
+        std::cout << "Start time: " << begin << std::endl;
+        VGG16(parse_engine_kind(argc, argv));
+        auto end = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count();
+        std::cout << "End time: " << end << std::endl;
 }
