@@ -477,9 +477,78 @@ void VGG16(engine::kind engine_kind){
 
     // -----------------------------------------------------------
     // convolutional layer 6: 56x56x256
+    memory::dims conv6_src_tz = {batch, 256, 56, 56};
+    memory::dims conv6_weights_tz = {256, 256, 3, 3};
+    memory::dims conv6_bias_tz = {256};
+    memory::dims conv6_dst_tz = {batch, 256, 56, 56};
+    memory::dims conv6_strides = {conv_stride, conv_stride};
+    memory::dims conv6_padding = {padding, padding};
+
+    std::vector<float> conv6_weights(product(conv6_weights_tz));
+    std::vector<float> conv6_bias(product(conv6_bias_tz));
+
+    // Create user memory
+    auto conv6_user_weights_memory
+            = memory({{conv6_weights_tz}, dt::f32, tag::oihw}, eng);
+    write_to_dnnl_memory(conv6_weights.data(), conv6_user_weights_memory);
+    auto conv6_user_bias_memory
+            = memory({{conv6_bias_tz}, dt::f32, tag::x}, eng);
+    write_to_dnnl_memory(conv6_bias.data(), conv6_user_bias_memory);
+
+    // Create convolution memory descriptors with format_tag::any
+    auto conv6_src_md = memory::desc({conv6_src_tz}, dt::f32, tag::any);
+    auto conv6_weights_md = memory::desc({conv6_weights_tz}, dt::f32, tag::any);
+    auto conv6_bias_md = memory::desc({conv6_bias_tz}, dt::f32, tag::any);
+    auto conv6_dst_md = memory::desc({conv6_dst_tz}, dt::f32, tag::any);
+
+    // Create convolution descriptor
+    auto conv6_desc = convolution_forward::desc(prop_kind::forward_inference,
+        algorithm::convolution_direct, conv6_src_md, conv6_weights_md,
+        conv6_bias_md, conv6_dst_md, conv6_strides, conv6_padding, conv6_padding);
+
+    // Create convolution primitive descriptor 
+    auto conv6_prim_desc = convolution_forward::primitive_desc(conv6_desc, eng);
+
+    // Check if data and weights format required by convolution is different 
+    // from the user format, if so reorder the memory layout
+    auto conv6_src_memory = conv5_dst_memory;
+    if (conv6_prim_desc.src_desc() != conv6_src_memory.get_desc()) {
+        conv6_src_memory = memory(conv6_prim_desc.src_desc(), eng);
+        net.push_back(reorder(conv5_dst_memory, conv6_src_memory));
+        net_args.push_back({{DNNL_ARG_FROM, conv5_dst_memory},
+                {DNNL_ARG_TO, conv6_src_memory}});
+    }
+
+    auto conv6_weights_memory = conv6_user_weights_memory;
+    if (conv6_prim_desc.weights_desc() != conv6_user_weights_memory.get_desc()) {
+        conv6_weights_memory = memory(conv6_prim_desc.weights_desc(), eng);
+        reorder(conv6_user_weights_memory, conv6_weights_memory)
+                .execute(s, conv6_user_weights_memory, conv6_weights_memory);
+    }
+
+    // Create memory for output
+    auto conv6_dst_memory = memory(conv6_prim_desc.dst_desc(),eng);
+
+    // Create the convolution primitive
+    net.push_back(convolution_forward(conv6_prim_desc));
+    net_args.push_back({{DNNL_ARG_SRC, conv6_src_memory},
+            {DNNL_ARG_WEIGHTS, conv6_weights_memory},
+            {DNNL_ARG_BIAS, conv6_user_bias_memory},
+            {DNNL_ARG_DST, conv6_dst_memory}});
 
     // -----------------------------------------------------------
     // ReLu6
+    const float negative6_slope = 0.0f;
+
+    // Create ReLu primitive
+    auto relu6_desc = eltwise_forward::desc(prop_kind::forward_inference,
+            algorithm::eltwise_relu, conv6_dst_memory.get_desc(),
+            negative6_slope);
+    auto relu6_prim_desc = eltwise_forward::primitive_desc(relu6_desc, eng);
+
+    net.push_back(eltwise_forward(relu6_prim_desc));
+    net_args.push_back({{DNNL_ARG_SRC, conv6_dst_memory},
+            {DNNL_ARG_DST, conv6_dst_memory}});
 
     // -----------------------------------------------------------
     // convolutional layer 7: 56x56x256
