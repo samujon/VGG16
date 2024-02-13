@@ -896,9 +896,78 @@ void VGG16(engine::kind engine_kind){
 
     // -----------------------------------------------------------
     // convolutional layer 11: 14x14x512
+    memory::dims conv11_src_tz = {batch, 512, 14, 14};
+    memory::dims conv11_weights_tz = {512, 512, 3, 3};
+    memory::dims conv11_bias_tz = {512};
+    memory::dims conv11_dst_tz = {batch, 512, 14, 14};
+    memory::dims conv11_strides = {conv_stride, conv_stride};
+    memory::dims conv11_padding = {padding, padding};
+
+    std::vector<float> conv11_weights(product(conv11_weights_tz));
+    std::vector<float> conv11_bias(product(conv11_bias_tz));
+
+    // Create user memory
+    auto conv11_user_weights_memory
+            = memory({{conv11_weights_tz}, dt::f32, tag::oihw}, eng);
+    write_to_dnnl_memory(conv11_weights.data(), conv11_user_weights_memory);
+    auto conv11_user_bias_memory
+            = memory({{conv11_bias_tz}, dt::f32, tag::x}, eng);
+    write_to_dnnl_memory(conv11_bias.data(), conv11_user_bias_memory);
+
+    // Create convolution memory descriptors with format_tag::any
+    auto conv11_src_md = memory::desc({conv11_src_tz}, dt::f32, tag::any);
+    auto conv11_weights_md = memory::desc({conv11_weights_tz}, dt::f32, tag::any);
+    auto conv11_bias_md = memory::desc({conv11_bias_tz}, dt::f32, tag::any);
+    auto conv11_dst_md = memory::desc({conv11_dst_tz}, dt::f32, tag::any);
+
+    // Create convolution descriptor
+    auto conv11_desc = convolution_forward::desc(prop_kind::forward_inference,
+        algorithm::convolution_direct, conv11_src_md, conv11_weights_md,
+        conv11_bias_md, conv11_dst_md, conv11_strides, conv11_padding, conv11_padding);
+
+    // Create convolution primitive descriptor 
+    auto conv11_prim_desc = convolution_forward::primitive_desc(conv11_desc, eng);
+
+    // Check if data and weights format required by convolution is different 
+    // from the user format, if so reorder the memory layout
+    auto conv11_src_memory = pool4_dst_memory;
+    if (conv11_prim_desc.src_desc() != conv11_src_memory.get_desc()) {
+        conv11_src_memory = memory(conv11_prim_desc.src_desc(), eng);
+        net.push_back(reorder(pool4_dst_memory, conv11_src_memory));
+        net_args.push_back({{DNNL_ARG_FROM, pool4_dst_memory},
+                {DNNL_ARG_TO, conv11_src_memory}});
+    }
+
+    auto conv11_weights_memory = conv11_user_weights_memory;
+    if (conv11_prim_desc.weights_desc() != conv11_user_weights_memory.get_desc()) {
+        conv11_weights_memory = memory(conv11_prim_desc.weights_desc(), eng);
+        reorder(conv11_user_weights_memory, conv11_weights_memory)
+                .execute(s, conv11_user_weights_memory, conv11_weights_memory);
+    }
+
+    // Create memory for output
+    auto conv11_dst_memory = memory(conv11_prim_desc.dst_desc(),eng);
+
+    // Create the convolution primitive
+    net.push_back(convolution_forward(conv11_prim_desc));
+    net_args.push_back({{DNNL_ARG_SRC, conv11_src_memory},
+            {DNNL_ARG_WEIGHTS, conv11_weights_memory},
+            {DNNL_ARG_BIAS, conv11_user_bias_memory},
+            {DNNL_ARG_DST, conv11_dst_memory}});
 
     // -----------------------------------------------------------
     // ReLu11
+    const float negative11_slope = 0.0f;
+
+    // Create ReLu primitive
+    auto relu11_desc = eltwise_forward::desc(prop_kind::forward_inference,
+            algorithm::eltwise_relu, conv11_dst_memory.get_desc(),
+            negative11_slope);
+    auto relu11_prim_desc = eltwise_forward::primitive_desc(relu11_desc, eng);
+
+    net.push_back(eltwise_forward(relu11_prim_desc));
+    net_args.push_back({{DNNL_ARG_SRC, conv11_dst_memory},
+            {DNNL_ARG_DST, conv11_dst_memory}});
 
     // -----------------------------------------------------------
     // convolutional layer 12: 14x14x512
