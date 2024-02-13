@@ -263,11 +263,11 @@ void VGG16(engine::kind engine_kind){
 
     // Check if data and weights format required by convolution is different 
     // from the user format, if so reorder the memory layout
-    auto conv3_src_memory = conv2_dst_memory;
+    auto conv3_src_memory = pool1_dst_memory;
     if (conv3_prim_desc.src_desc() != conv3_src_memory.get_desc()) {
         conv3_src_memory = memory(conv3_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv2_dst_memory, conv3_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv2_dst_memory},
+        net.push_back(reorder(pool1_dst_memory, conv3_src_memory));
+        net_args.push_back({{DNNL_ARG_FROM, pool1_dst_memory},
                 {DNNL_ARG_TO, conv3_src_memory}});
     }
 
