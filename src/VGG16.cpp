@@ -1141,6 +1141,51 @@ void VGG16(engine::kind engine_kind){
 
     // -----------------------------------------------------------
     // fully connected layer 1: 4096
+    memory::dims fc1_src_tz = {batch, 512, 7, 7};
+    memory::dims fc1_weights_tz = {4096, 512*7*7};
+    memory::dims fc1_bias_tz = {4096};
+    memory::dims fc1_dst_tz = {batch, 4096};
+
+    std::vector<float> fc1_weights(product(fc1_weights_tz));
+    std::vector<float> fc1_bias(product(fc1_bias_tz));
+
+    std::vector<float> fc1_bias(product(fc1_bias_tz));
+
+    // Create user memory
+    auto fc1_user_weights_memory = memory({{fc1_weights_tz}, dt::f32, tag::nc}, eng);
+    write_to_dnnl_memory(fc1_weights.data(), fc1_user_weights_memory);
+    auto fc1_user_bias_memory = memory({{fc1_bias_tz}, dt::f32, tag::x}, eng);
+    write_to_dnnl_memory(fc1_bias.data(), fc1_user_bias_memory);
+
+    // Create memory descriptors for convolution data
+    auto fc1_src_md = memory::desc({fc1_src_tz}, dt::f32, tag::any);
+    auto fc1_bias_md = memory::desc({fc1_bias_tz}, dt::f32, tag::any);
+    auto fc1_weights_md = memory::desc({fc1_weights_tz}, dt::f32, tag::any);
+    auto fc1_dst_md = memory::desc{{fc1_dst_tz}, dt::f32, tag::any};
+
+    // Create inner product (fully connected) descriptor
+    auto fc1_desc = inner_product_forward::desc(prop_kind::forward_inference,
+        fc1_src_md, fc1_weights_md, fc1_bias_md, fc1_dst_md);
+    auto fc1_prim_desc = inner_product_forward::primitive_desc(fc1_desc, eng);
+
+    // Check if reorder needed 
+    auto fc1_src_memory = pool5_dst_memory;
+    if (fc1_prim_desc.src_desc() != pool5_dst_memory.get_desc()) {
+        fc1_src_memory = memory(fc1_prim_desc.src_desc(), eng);
+        net.push_back(reorder(pool5_dst_memory, fc1_src_memory));
+        net_args.push_back({{DNNL_ARG_FROM, pool5_dst_memory},
+        {DNNL_ARG_TO, fc1_src_memory}});
+    }
+
+    // Create memory for output
+    auto fc1_dst_memory = memory(fc1_prim_desc.dst_desc(), eng);
+
+    // Add FC layer to the network
+    net.push_back(inner_product_forward(fc1_prim_desc));
+    net_args.push_back({{DNNL_ARG_SRC, fc1_src_memory},
+            {DNNL_ARG_WEIGHTS, fc1_user_weights_memory},
+            {DNNL_ARG_BIAS, fc1_user_bias_memory},
+            {DNNL_ARG_DST, fc1_dst_memory}});
 
     // -----------------------------------------------------------
     // ReLu
