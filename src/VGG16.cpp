@@ -626,8 +626,25 @@ void VGG16(engine::kind engine_kind){
             {DNNL_ARG_DST, conv7_dst_memory}});
 
     // -----------------------------------------------------------
-    // max pooling layer 3: 28x28x256
-    
+    // max pooling layer 3: 28x28x512
+    // 56x56 -> 28x28
+    memory::dims pool3_dst_tz = {batch, 512, 28, 28};
+    memory::dims pool3_kernel = {2, 2};
+    memory::dims pool3_strides = {2, 2};
+    memory::dims pool_padding = {0, 0};
+        
+    auto pool3_dst_md = memory::desc({pool3_dst_tz}, dt::f32, tag::any);
+
+    // Create pooling primitive
+    auto pool3_desc = pooling_forward::desc(prop_kind::forward_inference,
+            algorithm::pooling_max, conv7_dst_memory.get_desc(), pool3_dst_md,
+            pool3_strides, pool3_kernel, pool_padding, pool_padding);
+    auto pool3_pd = pooling_forward::primitive_desc(pool3_desc, eng);
+    auto pool3_dst_memory = memory(pool3_pd.dst_desc(), eng);
+
+    net.push_back(pooling_forward(pool3_pd));
+    net_args.push_back({{DNNL_ARG_SRC, conv7_dst_memory},
+            {DNNL_ARG_DST, pool3_dst_memory}});
 
     // -----------------------------------------------------------
     // convolutional layer 8: 28x28x512
