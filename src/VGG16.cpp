@@ -7,8 +7,6 @@
 #include "oneapi/dnnl/dnnl.hpp"
 #include "/home/samjons/thesis/oneDNN/examples/example_utils.hpp"
 
-#include "VGG16.hpp"
-
 using namespace dnnl;
 
 // CPU engine implementation
