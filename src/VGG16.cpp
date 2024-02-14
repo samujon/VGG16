@@ -13,18 +13,6 @@ using namespace dnnl;
 
 // CPU engine implementation
 
-/*
-During training, the input to our ConvNets is a fixed-size 224 × 224 RGB image. The only pre-
-processing we do is subtracting the mean RGB value, computed on the training set, from each pixel.
-The image is passed through a stack of convolutional (conv.) layers, where we use filters with a very
-small receptive field: 3 × 3 (which is the smallest size to capture the notion of left/right, up/down,
-center). In one of the configurations we also utilise 1 × 1 convolution filters, which can be seen as
-a linear transformation of the input channels (followed by non-linearity). The convolution stride is
-fixed to 1 pixel; the spatial padding of conv. layer input is such that the spatial resolution is preserved
-after convolution, i.e. the padding is 1 pixel for 3 × 3 conv. layers. Spatial pooling is carried out by
-five max-pooling layers, which follow some of the conv. layers (not all the conv. layers are followed
-by max-pooling). Max-pooling is performed over a 2 × 2 pixel window, with stride 2.
-*/
 // In comparison with AlexNet, VGG16 does not LRN, local response normalization
 // VGG16 D configuration
 void VGG16(engine::kind engine_kind){
@@ -1183,28 +1171,24 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> fc1_weights(product(fc1_weights_tz));
         std::vector<float> fc1_bias(product(fc1_bias_tz));
         
-        std::cout << "set dims" << std::endl;
         // Create user memory
         auto fc1_user_weights_memory = memory({{fc1_weights_tz}, dt::f32, tag::oihw}, eng);
         write_to_dnnl_memory(fc1_weights.data(), fc1_user_weights_memory);
         auto fc1_user_bias_memory = memory({{fc1_bias_tz}, dt::f32, tag::x}, eng);
         write_to_dnnl_memory(fc1_bias.data(), fc1_user_bias_memory);
 
-        std::cout << "set memory" << std::endl;
         // Create memory descriptors for convolution data
         auto fc1_src_md = memory::desc({fc1_src_tz}, dt::f32, tag::any);
         auto fc1_bias_md = memory::desc({fc1_bias_tz}, dt::f32, tag::any);
         auto fc1_weights_md = memory::desc({fc1_weights_tz}, dt::f32, tag::any);
         auto fc1_dst_md = memory::desc{{fc1_dst_tz}, dt::f32, tag::any};
 
-        std::cout << "set desc" << std::endl;
         // Create inner product (fully connected) descriptor
         auto fc1_desc = inner_product_forward::desc(prop_kind::forward_inference,
             fc1_src_md, fc1_weights_md, fc1_bias_md, fc1_dst_md);
-        std::cout << "set prim desc" << std::endl;
+
         auto fc1_prim_desc = inner_product_forward::primitive_desc(fc1_desc, eng);
 
-        std::cout << "set desc 2" << std::endl;
         // Check if reorder needed 
         auto fc1_src_memory = pool5_dst_memory;
         if (fc1_prim_desc.src_desc() != pool5_dst_memory.get_desc()) {
@@ -1213,7 +1197,7 @@ void VGG16(engine::kind engine_kind){
         net_args.push_back({{DNNL_ARG_FROM, pool5_dst_memory},
         {DNNL_ARG_TO, fc1_src_memory}});
         }
-        std::cout << "set src" << std::endl;
+
         // Create memory for output
         auto fc1_dst_memory = memory(fc1_prim_desc.dst_desc(), eng);
 
@@ -1302,7 +1286,8 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_DST, fc2_dst_memory}});
 
         // -----------------------------------------------------------
-        // softmax layer: 1000
+        // fully connected layer 3: 1000
+        std::cout << "fully connected layer 3" << std::endl;
         memory::dims fc3_src_tz = {batch, 4096};
         memory::dims fc3_weights_tz = {1000, 4096};
         memory::dims fc3_bias_tz = {1000};
@@ -1372,35 +1357,30 @@ void VGG16(engine::kind engine_kind){
         fc3_dst_memory.get_desc(), 1);
         auto softmax_prim_desc = softmax_forward::primitive_desc(softmax_desc, eng);
         auto softmax_dst_memory = memory(softmax_prim_desc.dst_desc(), eng);
-        std::cout << "Softmax 2" << std::endl;
         softmax_forward softmax_prim(softmax_prim_desc);
 
         // Execute softmax
-        std::cout << "Softmax 3" << std::endl;
         softmax_prim.execute(s, {{DNNL_ARG_SRC, fc3_dst_memory},
         {DNNL_ARG_DST, softmax_dst_memory}});
 
         // -----------------------------------------------------------
         // Execute model
         std::cout << "Execute model" << std::endl;
-        assert(net.size() == net_args.size() && "something is missing");
-        for (size_t i = 0; i < net.size(); ++i)
-        net.at(i).execute(s, net_args.at(i));
-
+        net.at(0).execute(s, net_args.at(0));
         s.wait();
 
 }
 
 int main(int argc, char **argv) {
-        std::cout << "Starting VGG16 main function" << std::endl;
         auto begin = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now().time_since_epoch())
                 .count();
-        std::cout << "Start time: " << begin << std::endl;
+        //std::cout << "Start time: " << begin << std::endl;
         VGG16(parse_engine_kind(argc, argv));
         auto end = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now().time_since_epoch())
                 .count();
-        std::cout << "End time: " << end << std::endl;
-        std::cout << "Total time:" << end - begin << std::endl;
+        std::cout << "VGG16 executed" << std::endl;
+        //std::cout << "End time: " << end << std::endl;
+        std::cout << "Total time:" << (end - begin)/1000.0 << "s" << std::endl;
 }
