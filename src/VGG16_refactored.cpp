@@ -5,7 +5,6 @@
 #include <unordered_map>
 
 #include "oneapi/dnnl/dnnl.hpp"
-//#include "VGG16_helpers.hpp"
 #include "/home/samjons/thesis/oneDNN/examples/example_utils.hpp"
 
 using namespace dnnl;
@@ -83,29 +82,39 @@ std::tuple<primitive, std::unordered_map<int, memory>> create_activation_layer(
     return {eltwise_forward(relu_pd), relu_args};
 }
 
-// Helper function to execute a max pooling layer
-std::tuple<primitive, std::unordered_map<int, memory>> create_max_pooling_layer(
-    engine& eng, const memory& src, const memory::dims& dst_tz, const memory::dims& kernel,
-    const memory::dims& strides, const memory::dims& padding) {
+// Helper function to create a fully connected layer
+std::tuple<primitive, std::unordered_map<int, memory>> create_fully_connected_layer(
+    engine& eng, stream& s, const memory& src, 
+    const memory::dims& weights_dims, const memory::dims& bias_dims, 
+    const memory::dims& dst_dims, float* weights_data, float* bias_data) {
     
-    // Output memory
-    auto pool_dst_md = memory::desc({dst_tz}, memory::data_type::f32, memory::format_tag::any);
-    auto pool_dst_memory = memory(pool_dst_md, eng);
-    
-    // Pooling descriptor
-    auto pool_desc = pooling_forward::desc(prop_kind::forward_inference,
-        algorithm::pooling_max, src.get_desc(), pool_dst_md,
-        strides, kernel, padding, padding);
-    auto pool_pd = pooling_forward::primitive_desc(pool_desc, eng);
-    
-    // Arguments for the pooling primitive
-    std::unordered_map<int, memory> pool_args = {
+    auto weights_md = memory::desc{{weights_dims}, memory::data_type::f32, memory::format_tag::any};
+    auto bias_md = memory::desc{{bias_dims}, memory::data_type::f32, memory::format_tag::any};
+    auto dst_md = memory::desc{{dst_dims}, memory::data_type::f32, memory::format_tag::any};
+    auto src_md = src.get_desc();
+
+    auto fc_desc = inner_product_forward::desc(prop_kind::forward_inference, src_md, weights_md, bias_md, dst_md);
+    auto fc_pd = inner_product_forward::primitive_desc(fc_desc, eng);
+
+    auto fc_weights_memory = memory(fc_pd.weights_desc(), eng);
+    write_to_dnnl_memory(weights_data, fc_weights_memory);
+
+    auto fc_bias_memory = memory(fc_pd.bias_desc(), eng);
+    write_to_dnnl_memory(bias_data, fc_bias_memory);
+
+    auto fc_dst_memory = memory(fc_pd.dst_desc(), eng);
+
+    std::unordered_map<int, memory> fc_args = {
         {DNNL_ARG_SRC, src},
-        {DNNL_ARG_DST, pool_dst_memory}
+        {DNNL_ARG_WEIGHTS, fc_weights_memory},
+        {DNNL_ARG_BIAS, fc_bias_memory},
+        {DNNL_ARG_DST, fc_dst_memory}
     };
-    
-    return {pooling_forward(pool_pd), pool_args};
+
+    return {inner_product_forward(fc_pd), fc_args};
 }
+
+
 // CPU engine implementation
 
 // In comparison with AlexNet, VGG16 does not LRN, local response normalization
@@ -659,43 +668,13 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> fc1_weights(product(fc1_weights_tz));
         std::vector<float> fc1_bias(product(fc1_bias_tz));
         
-        // Create user memory
-        auto fc1_user_weights_memory = memory({{fc1_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(fc1_weights.data(), fc1_user_weights_memory);
-        auto fc1_user_bias_memory = memory({{fc1_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(fc1_bias.data(), fc1_user_bias_memory);
-
-        // Create memory descriptors for convolution data
-        auto fc1_src_md = memory::desc({fc1_src_tz}, dt::f32, tag::any);
-        auto fc1_bias_md = memory::desc({fc1_bias_tz}, dt::f32, tag::any);
-        auto fc1_weights_md = memory::desc({fc1_weights_tz}, dt::f32, tag::any);
-        auto fc1_dst_md = memory::desc{{fc1_dst_tz}, dt::f32, tag::any};
-
-        // Create inner product (fully connected) descriptor
-        auto fc1_desc = inner_product_forward::desc(prop_kind::forward_inference,
-            fc1_src_md, fc1_weights_md, fc1_bias_md, fc1_dst_md);
-
-        auto fc1_prim_desc = inner_product_forward::primitive_desc(fc1_desc, eng);
-
-        // Check if reorder needed 
-        auto fc1_src_memory = pool5_dst_memory;
-        if (fc1_prim_desc.src_desc() != pool5_dst_memory.get_desc()) {
-        fc1_src_memory = memory(fc1_prim_desc.src_desc(), eng);
-        net.push_back(reorder(pool5_dst_memory, fc1_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, pool5_dst_memory},
-        {DNNL_ARG_TO, fc1_src_memory}});
-        }
-
-        // Create memory for output
-        auto fc1_dst_memory = memory(fc1_prim_desc.dst_desc(), eng);
-
-        // Add FC layer to the network
-        net.push_back(inner_product_forward(fc1_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, fc1_src_memory},
-        {DNNL_ARG_WEIGHTS, fc1_user_weights_memory},
-        {DNNL_ARG_BIAS, fc1_user_bias_memory},
-        {DNNL_ARG_DST, fc1_dst_memory}});
-
+        // Create fully connected layer
+        std::tuple<primitive, std::unordered_map<int, memory>> fc1 = create_fully_connected_layer(eng, s, pool5_dst_memory, 
+                fc1_weights_tz, fc1_bias_tz, fc1_dst_tz, fc1_weights.data(), fc1_bias.data());
+        auto fc1_dst_memory = std::get<1>(fc1).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(fc1));
+        net_args.push_back(std::get<1>(fc1));
+        
         // -----------------------------------------------------------
         // ReLu14
         std::cout << "ReLu14" << std::endl;
@@ -717,42 +696,13 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> fc2_weights(product(fc2_weights_tz));
         std::vector<float> fc2_bias(product(fc2_bias_tz));
 
-        // Create user memory
-        auto fc2_user_weights_memory = memory({{fc2_weights_tz}, dt::f32, tag::nc}, eng);
-        write_to_dnnl_memory(fc2_weights.data(), fc2_user_weights_memory);
-        auto fc2_user_bias_memory = memory({{fc2_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(fc2_bias.data(), fc2_user_bias_memory);
-
-        // Create memory descriptors for convolution data
-        auto fc2_src_md = memory::desc({fc2_src_tz}, dt::f32, tag::any);
-        auto fc2_bias_md = memory::desc({fc2_bias_tz}, dt::f32, tag::any);
-        auto fc2_weights_md = memory::desc({fc2_weights_tz}, dt::f32, tag::any);
-        auto fc2_dst_md = memory::desc{{fc2_dst_tz}, dt::f32, tag::any};
-
-        // Create inner product (fully connected) descriptor
-        auto fc2_desc = inner_product_forward::desc(prop_kind::forward_inference,
-        fc2_src_md, fc2_weights_md, fc2_bias_md, fc2_dst_md);
-        auto fc2_prim_desc = inner_product_forward::primitive_desc(fc2_desc, eng);
-
-        // Check if reorder needed 
-        auto fc2_src_memory = fc1_dst_memory;
-        if (fc2_prim_desc.src_desc() != fc1_dst_memory.get_desc()) {
-        fc2_src_memory = memory(fc2_prim_desc.src_desc(), eng);
-        net.push_back(reorder(fc1_dst_memory, fc2_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, fc1_dst_memory},
-        {DNNL_ARG_TO, fc2_src_memory}});
-        }
-
-        // Create memory for output
-        auto fc2_dst_memory = memory(fc2_prim_desc.dst_desc(), eng);
-
-        // Add FC layer to the network
-        net.push_back(inner_product_forward(fc2_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, fc2_src_memory},
-        {DNNL_ARG_WEIGHTS, fc2_user_weights_memory},
-        {DNNL_ARG_BIAS, fc2_user_bias_memory},
-        {DNNL_ARG_DST, fc2_dst_memory}});
-
+        // Create fully connected layer
+        std::tuple<primitive, std::unordered_map<int, memory>> fc2 = create_fully_connected_layer(eng, s, fc1_dst_memory, 
+                fc2_weights_tz, fc2_bias_tz, fc2_dst_tz, fc2_weights.data(), fc2_bias.data());
+        auto fc2_dst_memory = std::get<1>(fc2).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(fc2));
+        net_args.push_back(std::get<1>(fc2));
+        
         // -----------------------------------------------------------
         // ReLu15
         std::cout << "ReLu15" << std::endl;
@@ -779,43 +729,12 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> fc3_weights(product(fc3_weights_tz));
         std::vector<float> fc3_bias(product(fc3_bias_tz));
 
-        // Create user memory
-        auto fc3_user_weights_memory = memory({{fc3_weights_tz}, dt::f32, tag::nc}, eng);
-        write_to_dnnl_memory(fc3_weights.data(), fc3_user_weights_memory);
-        auto fc3_user_bias_memory = memory({{fc3_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(fc3_bias.data(), fc3_user_bias_memory);
-        //auto user_dst_memory = memory({{fc3_dst_tz}, dt::f32, tag::nc}, eng);
-        //write_to_dnnl_memory(user_dst.data(), user_dst_memory);
-
-        // Create memory descriptors for convolution data
-        auto fc3_src_md = memory::desc({fc3_src_tz}, dt::f32, tag::any);
-        auto fc3_bias_md = memory::desc({fc3_bias_tz}, dt::f32, tag::any);
-        auto fc3_weights_md = memory::desc({fc3_weights_tz}, dt::f32, tag::any);
-        auto fc3_dst_md = memory::desc{{fc3_dst_tz}, dt::f32, tag::any};
-
-        // Create inner product (fully connected) descriptor
-        auto fc3_desc = inner_product_forward::desc(prop_kind::forward_inference,
-        fc3_src_md, fc3_weights_md, fc3_bias_md, fc3_dst_md);
-        auto fc3_prim_desc = inner_product_forward::primitive_desc(fc3_desc, eng);
-
-        // Check if reorder needed 
-        auto fc3_src_memory = fc2_dst_memory;
-        if (fc3_prim_desc.src_desc() != fc2_dst_memory.get_desc()) {
-        fc3_src_memory = memory(fc3_prim_desc.src_desc(), eng);
-        net.push_back(reorder(fc2_dst_memory, fc3_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, fc2_dst_memory},
-        {DNNL_ARG_TO, fc3_src_memory}});
-        }
-
-        // Create memory for output
-        auto fc3_dst_memory = memory(fc3_prim_desc.dst_desc(), eng);
-
-        // Add FC layer to the network
-        net.push_back(inner_product_forward(fc3_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, fc3_src_memory},
-        {DNNL_ARG_WEIGHTS, fc3_user_weights_memory},
-        {DNNL_ARG_BIAS, fc3_user_bias_memory},
-        {DNNL_ARG_DST, fc3_dst_memory}});
+        // Create fully connected layer
+        std::tuple<primitive, std::unordered_map<int, memory>> fc3 = create_fully_connected_layer(eng, s, fc2_dst_memory, 
+                fc3_weights_tz, fc3_bias_tz, fc3_dst_tz, fc3_weights.data(), fc3_bias.data());
+        auto fc3_dst_memory = std::get<1>(fc3).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(fc3));
+        net_args.push_back(std::get<1>(fc3));
 
         // -----------------------------------------------------------
         // ReLu16
