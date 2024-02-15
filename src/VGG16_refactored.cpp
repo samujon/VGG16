@@ -183,17 +183,8 @@ void VGG16(engine::kind engine_kind){
         // ReLu1
         std::cout << "ReLu1" << std::endl;
         const float negative1_slope = 0.0f;
-        /*
+        
         // Create ReLu primitive
-        auto relu1_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, conv1_dst_memory.get_desc(),
-        negative1_slope);
-        auto relu1_prim_desc = eltwise_forward::primitive_desc(relu1_desc, eng);
-
-        net.push_back(eltwise_forward(relu1_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv1_dst_memory},
-        {DNNL_ARG_DST, conv1_dst_memory}});
-        */
         std::tuple<primitive, std::unordered_map<int, memory>> relu1 = create_activation_layer(eng, conv1_dst_memory, negative1_slope);
         net.push_back(std::get<0>(relu1));
         net_args.push_back(std::get<1>(relu1));
@@ -269,14 +260,9 @@ void VGG16(engine::kind engine_kind){
         const float negative2_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu2_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, conv2_dst_memory.get_desc(),
-        negative2_slope);
-        auto relu2_prim_desc = eltwise_forward::primitive_desc(relu2_desc, eng);
-
-        net.push_back(eltwise_forward(relu2_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv2_dst_memory},
-        {DNNL_ARG_DST, conv2_dst_memory}});
+        std::tuple<primitive, std::unordered_map<int, memory>> relu2 = create_activation_layer(eng, conv2_dst_memory, negative2_slope);
+        net.push_back(std::get<0>(relu2));
+        net_args.push_back(std::get<1>(relu2));
 
         // -----------------------------------------------------------
         // max pooling layer 1: 112x112
@@ -369,14 +355,9 @@ void VGG16(engine::kind engine_kind){
         const float negative3_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu3_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, conv3_dst_memory.get_desc(),
-        negative3_slope);
-        auto relu3_prim_desc = eltwise_forward::primitive_desc(relu3_desc, eng);
-
-        net.push_back(eltwise_forward(relu3_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv3_dst_memory},
-        {DNNL_ARG_DST, conv3_dst_memory}});
+        std::tuple<primitive, std::unordered_map<int, memory>> relu3 = create_activation_layer(eng, conv3_dst_memory, negative3_slope);
+        net.push_back(std::get<0>(relu3));
+        net_args.push_back(std::get<1>(relu3));
 
         // -----------------------------------------------------------
         // Convolutional layer 4: 112x112x128
@@ -447,14 +428,9 @@ void VGG16(engine::kind engine_kind){
         const float negative4_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu4_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, conv4_dst_memory.get_desc(),
-        negative4_slope);
-        auto relu4_prim_desc = eltwise_forward::primitive_desc(relu4_desc, eng);
-
-        net.push_back(eltwise_forward(relu4_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv4_dst_memory},
-        {DNNL_ARG_DST, conv4_dst_memory}});
+        std::tuple<primitive, std::unordered_map<int, memory>> relu4 = create_activation_layer(eng, conv4_dst_memory, negative4_slope);
+        net.push_back(std::get<0>(relu4));
+        net_args.push_back(std::get<1>(relu4));
 
         // -----------------------------------------------------------
         // max pooling layer 2: 56x56
@@ -546,14 +522,9 @@ void VGG16(engine::kind engine_kind){
         const float negative5_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu5_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, conv5_dst_memory.get_desc(),
-        negative5_slope);
-        auto relu5_prim_desc = eltwise_forward::primitive_desc(relu5_desc, eng);
-
-        net.push_back(eltwise_forward(relu5_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv5_dst_memory},
-        {DNNL_ARG_DST, conv5_dst_memory}});
+        std::tuple<primitive, std::unordered_map<int, memory>> relu5 = create_activation_layer(eng, conv5_dst_memory, negative5_slope);
+        net.push_back(std::get<0>(relu5));
+        net_args.push_back(std::get<1>(relu5));
 
         // -----------------------------------------------------------
         // convolutional layer 6: 56x56x256
@@ -623,14 +594,9 @@ void VGG16(engine::kind engine_kind){
         const float negative6_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu6_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, conv6_dst_memory.get_desc(),
-        negative6_slope);
-        auto relu6_prim_desc = eltwise_forward::primitive_desc(relu6_desc, eng);
-
-        net.push_back(eltwise_forward(relu6_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv6_dst_memory},
-        {DNNL_ARG_DST, conv6_dst_memory}});
+        std::tuple<primitive, std::unordered_map<int, memory>> relu6 = create_activation_layer(eng, conv6_dst_memory, negative6_slope);
+        net.push_back(std::get<0>(relu6));
+        net_args.push_back(std::get<1>(relu6));
 
         // -----------------------------------------------------------
         // convolutional layer 7: 56x56x256
@@ -700,14 +666,9 @@ void VGG16(engine::kind engine_kind){
         const float negative7_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu7_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, conv7_dst_memory.get_desc(),
-        negative7_slope);
-        auto relu7_prim_desc = eltwise_forward::primitive_desc(relu7_desc, eng);
-
-        net.push_back(eltwise_forward(relu7_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv7_dst_memory},
-        {DNNL_ARG_DST, conv7_dst_memory}});
+        std::tuple<primitive, std::unordered_map<int, memory>> relu7 = create_activation_layer(eng, conv7_dst_memory, negative7_slope);
+        net.push_back(std::get<0>(relu7));
+        net_args.push_back(std::get<1>(relu7));
 
         // -----------------------------------------------------------
         // max pooling layer 3: 28x28x256
@@ -798,15 +759,9 @@ void VGG16(engine::kind engine_kind){
         const float negative8_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu8_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, conv8_dst_memory.get_desc(),
-        negative8_slope);
-        auto relu8_prim_desc = eltwise_forward::primitive_desc(relu8_desc, eng);
-
-        net.push_back(eltwise_forward(relu8_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv8_dst_memory},
-        {DNNL_ARG_DST, conv8_dst_memory}});
-
+        std::tuple<primitive, std::unordered_map<int, memory>> relu8 = create_activation_layer(eng, conv8_dst_memory, negative8_slope);
+        net.push_back(std::get<0>(relu8));
+        net_args.push_back(std::get<1>(relu8));
 
         // -----------------------------------------------------------
         // convolutional layer 9: 28x28x512
@@ -876,15 +831,9 @@ void VGG16(engine::kind engine_kind){
         const float negative9_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu9_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, conv9_dst_memory.get_desc(),
-        negative9_slope);
-        auto relu9_prim_desc = eltwise_forward::primitive_desc(relu9_desc, eng);
-
-        net.push_back(eltwise_forward(relu9_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv9_dst_memory},
-        {DNNL_ARG_DST, conv9_dst_memory}});
-
+        std::tuple<primitive, std::unordered_map<int, memory>> relu9 = create_activation_layer(eng, conv9_dst_memory, negative9_slope);
+        net.push_back(std::get<0>(relu9));
+        net_args.push_back(std::get<1>(relu9));
 
         // -----------------------------------------------------------
         // convolutional layer 10: 28x28x512
@@ -954,14 +903,9 @@ void VGG16(engine::kind engine_kind){
         const float negative10_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu10_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, conv10_dst_memory.get_desc(),
-        negative10_slope);
-        auto relu10_prim_desc = eltwise_forward::primitive_desc(relu10_desc, eng);
-
-        net.push_back(eltwise_forward(relu10_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv10_dst_memory},
-        {DNNL_ARG_DST, conv10_dst_memory}});
+        std::tuple<primitive, std::unordered_map<int, memory>> relu10 = create_activation_layer(eng, conv10_dst_memory, negative10_slope);
+        net.push_back(std::get<0>(relu10));
+        net_args.push_back(std::get<1>(relu10));
 
         // -----------------------------------------------------------
         // max pooling layer 4: 14x14x512
@@ -1130,14 +1074,9 @@ void VGG16(engine::kind engine_kind){
         const float negative12_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu12_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, conv12_dst_memory.get_desc(),
-        negative12_slope);
-        auto relu12_prim_desc = eltwise_forward::primitive_desc(relu12_desc, eng);
-
-        net.push_back(eltwise_forward(relu12_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv12_dst_memory},
-        {DNNL_ARG_DST, conv12_dst_memory}});
+        std::tuple<primitive, std::unordered_map<int, memory>> relu12 = create_activation_layer(eng, conv12_dst_memory, negative12_slope);
+        net.push_back(std::get<0>(relu12));
+        net_args.push_back(std::get<1>(relu12));
 
         // -----------------------------------------------------------
         // convolutional layer 13: 14x14x512
@@ -1207,14 +1146,9 @@ void VGG16(engine::kind engine_kind){
         const float negative13_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu13_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, conv13_dst_memory.get_desc(),
-        negative13_slope);
-        auto relu13_prim_desc = eltwise_forward::primitive_desc(relu13_desc, eng);
-
-        net.push_back(eltwise_forward(relu13_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv13_dst_memory},
-        {DNNL_ARG_DST, conv13_dst_memory}});
+        std::tuple<primitive, std::unordered_map<int, memory>> relu13 = create_activation_layer(eng, conv13_dst_memory, negative13_slope);
+        net.push_back(std::get<0>(relu13));
+        net_args.push_back(std::get<1>(relu13));
 
         // -----------------------------------------------------------
         // max pooling layer 5: 7x7x512
@@ -1291,14 +1225,9 @@ void VGG16(engine::kind engine_kind){
         const float negative14_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu14_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, fc1_dst_memory.get_desc(),
-        negative14_slope);
-        auto relu14_prim_desc = eltwise_forward::primitive_desc(relu14_desc, eng);
-
-        net.push_back(eltwise_forward(relu14_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, fc1_dst_memory},
-        {DNNL_ARG_DST, fc1_dst_memory}});
+        std::tuple<primitive, std::unordered_map<int, memory>> relu14 = create_activation_layer(eng, fc1_dst_memory, negative14_slope);
+        net.push_back(std::get<0>(relu14));
+        net_args.push_back(std::get<1>(relu14));
 
         // -----------------------------------------------------------
         // fully connected layer 2: 4096
@@ -1417,16 +1346,10 @@ void VGG16(engine::kind engine_kind){
         const float negative16_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu16_desc = eltwise_forward::desc(prop_kind::forward_inference,
-        algorithm::eltwise_relu, fc3_dst_memory.get_desc(),
-        negative16_slope);
-        auto relu16_prim_desc = eltwise_forward::primitive_desc(relu15_desc, eng);
-
-        net.push_back(eltwise_forward(relu16_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, fc3_dst_memory},
-        {DNNL_ARG_DST, fc3_dst_memory}});
-
-
+        std::tuple<primitive, std::unordered_map<int, memory>> relu16 = create_activation_layer(eng, fc3_dst_memory, negative16_slope);
+        net.push_back(std::get<0>(relu16));
+        net_args.push_back(std::get<1>(relu16));
+        
         // -----------------------------------------------------------
         // Softmax
         std::cout << "Softmax" << std::endl;
