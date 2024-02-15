@@ -131,54 +131,14 @@ void VGG16(engine::kind engine_kind){
         // Create user memory
         auto user_src_memory = memory({{conv1_src_tz}, dt::f32, tag::nchw}, eng);
         write_to_dnnl_memory(user_src.data(), user_src_memory);
-        auto user_weights_memory
-        = memory({{conv1_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(conv1_weights.data(), user_weights_memory);
-        auto conv1_user_bias_memory
-        = memory({{conv1_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(conv1_bias.data(), conv1_user_bias_memory);
-
-        // Create convolution memory descriptors with format_tag::any
-        auto conv1_src_md = memory::desc({conv1_src_tz}, dt::f32, tag::any);
-        auto conv1_weights_md = memory::desc({conv1_weights_tz}, dt::f32, tag::any);
-        auto conv1_bias_md = memory::desc({conv1_bias_tz}, dt::f32, tag::any);
-        auto conv1_dst_md = memory::desc({conv1_dst_tz}, dt::f32, tag::any);
-
-        // Create convolution descriptor
-        auto conv1_desc = convolution_forward::desc(prop_kind::forward_inference,
-        algorithm::convolution_direct, conv1_src_md, conv1_weights_md,
-        conv1_bias_md, conv1_dst_md, conv1_strides, conv1_padding, conv1_padding);
-
-        // Create convolution primitive descriptor 
-        auto conv1_prim_desc = convolution_forward::primitive_desc(conv1_desc, eng);
-
-        // Check if data and weights format required by convolution is different 
-        // from the user format, if so reorder the memory layout
-        auto conv1_src_memory = user_src_memory;
-        if (conv1_prim_desc.src_desc() != user_src_memory.get_desc()) {
-        conv1_src_memory = memory(conv1_prim_desc.src_desc(), eng);
-        net.push_back(reorder(user_src_memory, conv1_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, user_src_memory},
-                {DNNL_ARG_TO, conv1_src_memory}});
-        }
-
-        auto conv1_weights_memory = user_weights_memory;
-        if (conv1_prim_desc.weights_desc() != user_weights_memory.get_desc()) {
-        conv1_weights_memory = memory(conv1_prim_desc.weights_desc(), eng);
-        reorder(user_weights_memory, conv1_weights_memory)
-                .execute(s, user_weights_memory, conv1_weights_memory);
-        }
-
-        // Create memory for output
-        auto conv1_dst_memory = memory(conv1_prim_desc.dst_desc(),eng);
-
-        // Create the convolution primitive
-        net.push_back(convolution_forward(conv1_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv1_src_memory},
-        {DNNL_ARG_WEIGHTS, conv1_weights_memory},
-        {DNNL_ARG_BIAS, conv1_user_bias_memory},
-        {DNNL_ARG_DST, conv1_dst_memory}});
         
+        // Create convolution layer
+        std::tuple<primitive, std::unordered_map<int, memory>> conv1 = create_convolution_layer(eng, s, user_src_memory, conv1_src_tz, 
+                conv1_weights_tz, conv1_bias_tz, conv1_dst_tz, conv1_strides, conv1_padding, conv1_weights.data(), conv1_bias.data());
+        auto conv1_dst_memory = std::get<1>(conv1).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(conv1));
+        net_args.push_back(std::get<1>(conv1));
+
         // -----------------------------------------------------------
         // ReLu1
         std::cout << "ReLu1" << std::endl;
@@ -204,55 +164,12 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> conv2_weights(product(conv2_weights_tz));
         std::vector<float> conv2_bias(product(conv2_bias_tz));
 
-        // Create user memory
-        auto conv2_user_weights_memory
-        = memory({{conv2_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(conv2_weights.data(), conv2_user_weights_memory);
-        auto conv2_user_bias_memory
-        = memory({{conv2_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(conv2_bias.data(), conv2_user_bias_memory);
-
-        // Create convolution memory descriptors with format_tag::any
-        auto conv2_src_md = memory::desc({conv2_src_tz}, dt::f32, tag::any);
-        auto conv2_weights_md = memory::desc({conv2_weights_tz}, dt::f32, tag::any);
-        auto conv2_bias_md = memory::desc({conv2_bias_tz}, dt::f32, tag::any);
-        auto conv2_dst_md = memory::desc({conv2_dst_tz}, dt::f32, tag::any);
-
-        // Create convolution descriptor
-        auto conv2_desc = convolution_forward::desc(prop_kind::forward_inference,
-        algorithm::convolution_direct, conv2_src_md, conv2_weights_md,
-        conv2_bias_md, conv2_dst_md, conv2_strides, conv2_padding, conv2_padding);
-
-        // Create convolution primitive descriptor 
-        auto conv2_prim_desc = convolution_forward::primitive_desc(conv2_desc, eng);
-
-        // Check if data and weights format required by convolution is different 
-        // from the user format, if so reorder the memory layout
-        auto conv2_src_memory = conv1_dst_memory;
-        if (conv2_prim_desc.src_desc() != conv2_src_memory.get_desc()) {
-        conv2_src_memory = memory(conv2_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv1_dst_memory, conv2_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv1_dst_memory},
-                {DNNL_ARG_TO, conv2_src_memory}});
-        }
-
-        auto conv2_weights_memory = conv2_user_weights_memory;
-        if (conv2_prim_desc.weights_desc() != conv2_user_weights_memory.get_desc()) {
-        conv2_weights_memory = memory(conv2_prim_desc.weights_desc(), eng);
-        reorder(conv2_user_weights_memory, conv2_weights_memory)
-                .execute(s, conv2_user_weights_memory, conv2_weights_memory);
-        }
-
-        // Create memory for output
-        auto conv2_dst_memory = memory(conv2_prim_desc.dst_desc(),eng);
-
-        // Create the convolution primitive
-        net.push_back(convolution_forward(conv2_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv2_src_memory},
-        {DNNL_ARG_WEIGHTS, conv2_weights_memory},
-        {DNNL_ARG_BIAS, conv2_user_bias_memory},
-        {DNNL_ARG_DST, conv2_dst_memory}});
-
+        // Create convolution layer
+        std::tuple<primitive, std::unordered_map<int, memory>> conv2 = create_convolution_layer(eng, s, conv1_dst_memory, conv2_src_tz, 
+                conv2_weights_tz, conv2_bias_tz, conv2_dst_tz, conv2_strides, conv2_padding, conv2_weights.data(), conv2_bias.data());
+        auto conv2_dst_memory = std::get<1>(conv2).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(conv2));
+        net_args.push_back(std::get<1>(conv2));
 
         // -----------------------------------------------------------
         // ReLu2
@@ -300,55 +217,13 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> conv3_weights(product(conv3_weights_tz));
         std::vector<float> conv3_bias(product(conv3_bias_tz));
 
-        // Create user memory
-        auto conv3_user_weights_memory
-        = memory({{conv3_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(conv3_weights.data(), conv3_user_weights_memory);
-        auto conv3_user_bias_memory
-        = memory({{conv3_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(conv3_bias.data(), conv3_user_bias_memory);
-
-        // Create convolution memory descriptors with format_tag::any
-        auto conv3_src_md = memory::desc({conv3_src_tz}, dt::f32, tag::any);
-        auto conv3_weights_md = memory::desc({conv3_weights_tz}, dt::f32, tag::any);
-        auto conv3_bias_md = memory::desc({conv3_bias_tz}, dt::f32, tag::any);
-        auto conv3_dst_md = memory::desc({conv3_dst_tz}, dt::f32, tag::any);
-
-        // Create convolution descriptor
-        auto conv3_desc = convolution_forward::desc(prop_kind::forward_inference,
-        algorithm::convolution_direct, conv3_src_md, conv3_weights_md,
-        conv3_bias_md,conv3_dst_md, conv3_strides, conv3_padding, conv3_padding);
-
-        // Create convolution primitive descriptor 
-        auto conv3_prim_desc = convolution_forward::primitive_desc(conv3_desc, eng);
-
-        // Check if data and weights format required by convolution is different 
-        // from the user format, if so reorder the memory layout
-        auto conv3_src_memory = pool1_dst_memory;
-        if (conv3_prim_desc.src_desc() != conv3_src_memory.get_desc()) {
-        conv3_src_memory = memory(conv3_prim_desc.src_desc(), eng);
-        net.push_back(reorder(pool1_dst_memory, conv3_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, pool1_dst_memory},
-                {DNNL_ARG_TO, conv3_src_memory}});
-        }
-
-        auto conv3_weights_memory = conv3_user_weights_memory;
-        if (conv3_prim_desc.weights_desc() != conv3_user_weights_memory.get_desc()) {
-        conv3_weights_memory = memory(conv3_prim_desc.weights_desc(), eng);
-        reorder(conv3_user_weights_memory, conv3_weights_memory)
-                .execute(s, conv3_user_weights_memory, conv3_weights_memory);
-        }
-
-        // Create memory for output
-        auto conv3_dst_memory = memory(conv3_prim_desc.dst_desc(),eng);
-
-        // Create the convolution primitive
-        net.push_back(convolution_forward(conv3_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv3_src_memory},
-        {DNNL_ARG_WEIGHTS, conv3_weights_memory},
-        {DNNL_ARG_BIAS, conv3_user_bias_memory},
-        {DNNL_ARG_DST, conv3_dst_memory}});
-
+        // Create convolution layer
+        std::tuple<primitive, std::unordered_map<int, memory>> conv3 = create_convolution_layer(eng, s, pool1_dst_memory, conv3_src_tz, 
+                conv3_weights_tz, conv3_bias_tz, conv3_dst_tz, conv3_strides, conv3_padding, conv3_weights.data(), conv3_bias.data());
+        auto conv3_dst_memory = std::get<1>(conv3).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(conv3));
+        net_args.push_back(std::get<1>(conv3));
+        
         // -----------------------------------------------------------
         // ReLu3
         std::cout << "ReLu3" << std::endl;
@@ -372,55 +247,12 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> conv4_weights(product(conv4_weights_tz));
         std::vector<float> conv4_bias(product(conv4_bias_tz));
 
-
-        // Create user memory
-        auto conv4_user_weights_memory
-        = memory({{conv4_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(conv4_weights.data(), conv4_user_weights_memory);
-        auto conv4_user_bias_memory
-        = memory({{conv4_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(conv4_bias.data(), conv4_user_bias_memory);
-
-        // Create convolution memory descriptors with format_tag::any
-        auto conv4_src_md = memory::desc({conv4_src_tz}, dt::f32, tag::any);
-        auto conv4_weights_md = memory::desc({conv4_weights_tz}, dt::f32, tag::any);
-        auto conv4_bias_md = memory::desc({conv4_bias_tz}, dt::f32, tag::any);
-        auto conv4_dst_md = memory::desc({conv4_dst_tz}, dt::f32, tag::any);
-
-        // Create convolution descriptor
-        auto conv4_desc = convolution_forward::desc(prop_kind::forward_inference,
-        algorithm::convolution_direct, conv4_src_md, conv4_weights_md,
-        conv4_bias_md,conv4_dst_md, conv4_strides, conv4_padding, conv4_padding);
-
-        // Create convolution primitive descriptor 
-        auto conv4_prim_desc = convolution_forward::primitive_desc(conv4_desc, eng);
-
-        // Check if data and weights format required by convolution is different 
-        // from the user format, if so reorder the memory layout
-        auto conv4_src_memory = conv3_dst_memory;
-        if (conv4_prim_desc.src_desc() != conv4_src_memory.get_desc()) {
-        conv4_src_memory = memory(conv4_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv3_dst_memory, conv4_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv3_dst_memory},
-                {DNNL_ARG_TO, conv4_src_memory}});
-        }
-
-        auto conv4_weights_memory = conv4_user_weights_memory;
-        if (conv4_prim_desc.weights_desc() != conv4_user_weights_memory.get_desc()) {
-        conv4_weights_memory = memory(conv4_prim_desc.weights_desc(), eng);
-        reorder(conv4_user_weights_memory, conv4_weights_memory)
-                .execute(s, conv4_user_weights_memory, conv4_weights_memory);
-        }
-
-        // Create memory for output
-        auto conv4_dst_memory = memory(conv4_prim_desc.dst_desc(),eng);
-
-        // Create the convolution primitive
-        net.push_back(convolution_forward(conv4_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv4_src_memory},
-        {DNNL_ARG_WEIGHTS, conv4_weights_memory},
-        {DNNL_ARG_BIAS, conv4_user_bias_memory},
-        {DNNL_ARG_DST, conv4_dst_memory}});
+        // Create convolutiion layer
+        std::tuple<primitive, std::unordered_map<int, memory>> conv4 = create_convolution_layer(eng, s, conv3_dst_memory, conv4_src_tz, 
+                conv4_weights_tz, conv4_bias_tz, conv4_dst_tz, conv4_strides, conv4_padding, conv4_weights.data(), conv4_bias.data());
+        auto conv4_dst_memory = std::get<1>(conv4).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(conv4));
+        net_args.push_back(std::get<1>(conv4));
 
         // -----------------------------------------------------------
         // ReLu4
@@ -467,55 +299,13 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> conv5_weights(product(conv5_weights_tz));
         std::vector<float> conv5_bias(product(conv5_bias_tz));
 
-        // Create user memory
-        auto conv5_user_weights_memory
-        = memory({{conv5_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(conv5_weights.data(), conv5_user_weights_memory);
-        auto conv5_user_bias_memory
-        = memory({{conv5_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(conv5_bias.data(), conv5_user_bias_memory);
-
-        // Create convolution memory descriptors with format_tag::any
-        auto conv5_src_md = memory::desc({conv5_src_tz}, dt::f32, tag::any);
-        auto conv5_weights_md = memory::desc({conv5_weights_tz}, dt::f32, tag::any);
-        auto conv5_bias_md = memory::desc({conv5_bias_tz}, dt::f32, tag::any);
-        auto conv5_dst_md = memory::desc({conv5_dst_tz}, dt::f32, tag::any);
-
-        // Create convolution descriptor
-        auto conv5_desc = convolution_forward::desc(prop_kind::forward_inference,
-        algorithm::convolution_direct, conv5_src_md, conv5_weights_md,
-        conv5_bias_md, conv5_dst_md, conv5_strides, conv5_padding, conv5_padding);
-
-        // Create convolution primitive descriptor 
-        auto conv5_prim_desc = convolution_forward::primitive_desc(conv5_desc, eng);
-
-        // Check if data and weights format required by convolution is different 
-        // from the user format, if so reorder the memory layout
-        auto conv5_src_memory = pool2_dst_memory;
-        if (conv5_prim_desc.src_desc() != conv5_src_memory.get_desc()) {
-        conv5_src_memory = memory(conv5_prim_desc.src_desc(), eng);
-        net.push_back(reorder(pool2_dst_memory, conv5_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, pool2_dst_memory},
-                {DNNL_ARG_TO, conv5_src_memory}});
-        }
-
-        auto conv5_weights_memory = conv5_user_weights_memory;
-        if (conv5_prim_desc.weights_desc() != conv5_user_weights_memory.get_desc()) {
-        conv5_weights_memory = memory(conv5_prim_desc.weights_desc(), eng);
-        reorder(conv5_user_weights_memory, conv5_weights_memory)
-                .execute(s, conv5_user_weights_memory, conv5_weights_memory);
-        }
-
-        // Create memory for output
-        auto conv5_dst_memory = memory(conv5_prim_desc.dst_desc(),eng);
-
-        // Create the convolution primitive
-        net.push_back(convolution_forward(conv5_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv5_src_memory},
-        {DNNL_ARG_WEIGHTS, conv5_weights_memory},
-        {DNNL_ARG_BIAS, conv5_user_bias_memory},
-        {DNNL_ARG_DST, conv5_dst_memory}});
-
+        // Create convolution layer
+        std::tuple<primitive, std::unordered_map<int, memory>> conv5 = create_convolution_layer(eng, s, pool2_dst_memory, conv5_src_tz, 
+                conv5_weights_tz, conv5_bias_tz, conv5_dst_tz, conv5_strides, conv5_padding, conv5_weights.data(), conv5_bias.data());
+        auto conv5_dst_memory = std::get<1>(conv5).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(conv5));
+        net_args.push_back(std::get<1>(conv5));
+        
         // -----------------------------------------------------------
         // ReLu5
         std::cout << "ReLu5" << std::endl;
@@ -539,54 +329,12 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> conv6_weights(product(conv6_weights_tz));
         std::vector<float> conv6_bias(product(conv6_bias_tz));
 
-        // Create user memory
-        auto conv6_user_weights_memory
-        = memory({{conv6_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(conv6_weights.data(), conv6_user_weights_memory);
-        auto conv6_user_bias_memory
-        = memory({{conv6_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(conv6_bias.data(), conv6_user_bias_memory);
-
-        // Create convolution memory descriptors with format_tag::any
-        auto conv6_src_md = memory::desc({conv6_src_tz}, dt::f32, tag::any);
-        auto conv6_weights_md = memory::desc({conv6_weights_tz}, dt::f32, tag::any);
-        auto conv6_bias_md = memory::desc({conv6_bias_tz}, dt::f32, tag::any);
-        auto conv6_dst_md = memory::desc({conv6_dst_tz}, dt::f32, tag::any);
-
-        // Create convolution descriptor
-        auto conv6_desc = convolution_forward::desc(prop_kind::forward_inference,
-        algorithm::convolution_direct, conv6_src_md, conv6_weights_md,
-        conv6_bias_md, conv6_dst_md, conv6_strides, conv6_padding, conv6_padding);
-
-        // Create convolution primitive descriptor 
-        auto conv6_prim_desc = convolution_forward::primitive_desc(conv6_desc, eng);
-
-        // Check if data and weights format required by convolution is different 
-        // from the user format, if so reorder the memory layout
-        auto conv6_src_memory = conv5_dst_memory;
-        if (conv6_prim_desc.src_desc() != conv6_src_memory.get_desc()) {
-        conv6_src_memory = memory(conv6_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv5_dst_memory, conv6_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv5_dst_memory},
-                {DNNL_ARG_TO, conv6_src_memory}});
-        }
-
-        auto conv6_weights_memory = conv6_user_weights_memory;
-        if (conv6_prim_desc.weights_desc() != conv6_user_weights_memory.get_desc()) {
-        conv6_weights_memory = memory(conv6_prim_desc.weights_desc(), eng);
-        reorder(conv6_user_weights_memory, conv6_weights_memory)
-                .execute(s, conv6_user_weights_memory, conv6_weights_memory);
-        }
-
-        // Create memory for output
-        auto conv6_dst_memory = memory(conv6_prim_desc.dst_desc(),eng);
-
-        // Create the convolution primitive
-        net.push_back(convolution_forward(conv6_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv6_src_memory},
-        {DNNL_ARG_WEIGHTS, conv6_weights_memory},
-        {DNNL_ARG_BIAS, conv6_user_bias_memory},
-        {DNNL_ARG_DST, conv6_dst_memory}});
+        // Create convolution layer
+        std::tuple<primitive, std::unordered_map<int, memory>> conv6 = create_convolution_layer(eng, s, conv5_dst_memory, conv6_src_tz, 
+                conv6_weights_tz, conv6_bias_tz, conv6_dst_tz, conv6_strides, conv6_padding, conv6_weights.data(), conv6_bias.data());
+        auto conv6_dst_memory = std::get<1>(conv6).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(conv6));
+        net_args.push_back(std::get<1>(conv6));
 
         // -----------------------------------------------------------
         // ReLu6
@@ -611,54 +359,12 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> conv7_weights(product(conv7_weights_tz));
         std::vector<float> conv7_bias(product(conv7_bias_tz));
 
-        // Create user memory
-        auto conv7_user_weights_memory
-        = memory({{conv7_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(conv7_weights.data(), conv7_user_weights_memory);
-        auto conv7_user_bias_memory
-        = memory({{conv7_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(conv7_bias.data(), conv7_user_bias_memory);
-
-        // Create convolution memory descriptors with format_tag::any
-        auto conv7_src_md = memory::desc({conv7_src_tz}, dt::f32, tag::any);
-        auto conv7_weights_md = memory::desc({conv7_weights_tz}, dt::f32, tag::any);
-        auto conv7_bias_md = memory::desc({conv7_bias_tz}, dt::f32, tag::any);
-        auto conv7_dst_md = memory::desc({conv7_dst_tz}, dt::f32, tag::any);
-
-        // Create convolution descriptor
-        auto conv7_desc = convolution_forward::desc(prop_kind::forward_inference,
-        algorithm::convolution_direct, conv7_src_md, conv7_weights_md,
-        conv7_bias_md, conv7_dst_md, conv7_strides, conv7_padding, conv7_padding);
-
-        // Create convolution primitive descriptor 
-        auto conv7_prim_desc = convolution_forward::primitive_desc(conv7_desc, eng);
-
-        // Check if data and weights format required by convolution is different 
-        // from the user format, if so reorder the memory layout
-        auto conv7_src_memory = conv6_dst_memory;
-        if (conv7_prim_desc.src_desc() != conv7_src_memory.get_desc()) {
-        conv7_src_memory = memory(conv7_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv6_dst_memory, conv7_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv6_dst_memory},
-                {DNNL_ARG_TO, conv7_src_memory}});
-        }
-
-        auto conv7_weights_memory = conv7_user_weights_memory;
-        if (conv7_prim_desc.weights_desc() != conv7_user_weights_memory.get_desc()) {
-        conv7_weights_memory = memory(conv7_prim_desc.weights_desc(), eng);
-        reorder(conv7_user_weights_memory, conv7_weights_memory)
-                .execute(s, conv7_user_weights_memory, conv7_weights_memory);
-        }
-
-        // Create memory for output
-        auto conv7_dst_memory = memory(conv7_prim_desc.dst_desc(),eng);
-
-        // Create the convolution primitive
-        net.push_back(convolution_forward(conv7_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv7_src_memory},
-        {DNNL_ARG_WEIGHTS, conv7_weights_memory},
-        {DNNL_ARG_BIAS, conv7_user_bias_memory},
-        {DNNL_ARG_DST, conv7_dst_memory}});
+        // Create convolution layer
+        std::tuple<primitive, std::unordered_map<int, memory>> conv7 = create_convolution_layer(eng, s, conv6_dst_memory, conv7_src_tz, 
+                conv7_weights_tz, conv7_bias_tz, conv7_dst_tz, conv7_strides, conv7_padding, conv7_weights.data(), conv7_bias.data());
+        auto conv7_dst_memory = std::get<1>(conv7).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(conv7));
+        net_args.push_back(std::get<1>(conv7));
 
         // -----------------------------------------------------------
         // ReLu7
@@ -704,54 +410,12 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> conv8_weights(product(conv8_weights_tz));
         std::vector<float> conv8_bias(product(conv8_bias_tz));
 
-        // Create user memory
-        auto conv8_user_weights_memory
-        = memory({{conv8_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(conv8_weights.data(), conv8_user_weights_memory);
-        auto conv8_user_bias_memory
-        = memory({{conv8_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(conv8_bias.data(), conv8_user_bias_memory);
-
-        // Create convolution memory descriptors with format_tag::any
-        auto conv8_src_md = memory::desc({conv8_src_tz}, dt::f32, tag::any);
-        auto conv8_weights_md = memory::desc({conv8_weights_tz}, dt::f32, tag::any);
-        auto conv8_bias_md = memory::desc({conv8_bias_tz}, dt::f32, tag::any);
-        auto conv8_dst_md = memory::desc({conv8_dst_tz}, dt::f32, tag::any);
-
-        // Create convolution descriptor
-        auto conv8_desc = convolution_forward::desc(prop_kind::forward_inference,
-        algorithm::convolution_direct, conv8_src_md, conv8_weights_md,
-        conv8_bias_md, conv8_dst_md, conv8_strides, conv8_padding, conv8_padding);
-
-        // Create convolution primitive descriptor 
-        auto conv8_prim_desc = convolution_forward::primitive_desc(conv8_desc, eng);
-
-        // Check if data and weights format required by convolution is different 
-        // from the user format, if so reorder the memory layout
-        auto conv8_src_memory = pool3_dst_memory;
-        if (conv8_prim_desc.src_desc() != conv8_src_memory.get_desc()) {
-        conv8_src_memory = memory(conv8_prim_desc.src_desc(), eng);
-        net.push_back(reorder(pool3_dst_memory, conv8_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, pool3_dst_memory},
-                {DNNL_ARG_TO, conv8_src_memory}});
-        }
-
-        auto conv8_weights_memory = conv8_user_weights_memory;
-        if (conv8_prim_desc.weights_desc() != conv8_user_weights_memory.get_desc()) {
-        conv8_weights_memory = memory(conv8_prim_desc.weights_desc(), eng);
-        reorder(conv8_user_weights_memory, conv8_weights_memory)
-                .execute(s, conv8_user_weights_memory, conv8_weights_memory);
-        }
-
-        // Create memory for output
-        auto conv8_dst_memory = memory(conv8_prim_desc.dst_desc(),eng);
-
-        // Create the convolution primitive
-        net.push_back(convolution_forward(conv8_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv8_src_memory},
-        {DNNL_ARG_WEIGHTS, conv8_weights_memory},
-        {DNNL_ARG_BIAS, conv8_user_bias_memory},
-        {DNNL_ARG_DST, conv8_dst_memory}});
+        // Create convolutional layer
+        std::tuple<primitive, std::unordered_map<int, memory>> conv8 = create_convolution_layer(eng, s, pool3_dst_memory, conv8_src_tz, 
+                conv8_weights_tz, conv8_bias_tz, conv8_dst_tz, conv8_strides, conv8_padding, conv8_weights.data(), conv8_bias.data());
+        auto conv8_dst_memory = std::get<1>(conv8).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(conv8));
+        net_args.push_back(std::get<1>(conv8));
 
         // -----------------------------------------------------------
         // ReLu8
@@ -776,54 +440,12 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> conv9_weights(product(conv9_weights_tz));
         std::vector<float> conv9_bias(product(conv9_bias_tz));
 
-        // Create user memory
-        auto conv9_user_weights_memory
-        = memory({{conv9_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(conv9_weights.data(), conv9_user_weights_memory);
-        auto conv9_user_bias_memory
-        = memory({{conv9_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(conv9_bias.data(), conv9_user_bias_memory);
-
-        // Create convolution memory descriptors with format_tag::any
-        auto conv9_src_md = memory::desc({conv9_src_tz}, dt::f32, tag::any);
-        auto conv9_weights_md = memory::desc({conv9_weights_tz}, dt::f32, tag::any);
-        auto conv9_bias_md = memory::desc({conv9_bias_tz}, dt::f32, tag::any);
-        auto conv9_dst_md = memory::desc({conv9_dst_tz}, dt::f32, tag::any);
-
-        // Create convolution descriptor
-        auto conv9_desc = convolution_forward::desc(prop_kind::forward_inference,
-        algorithm::convolution_direct, conv9_src_md, conv9_weights_md,
-        conv9_bias_md, conv9_dst_md, conv9_strides, conv9_padding, conv9_padding);
-
-        // Create convolution primitive descriptor 
-        auto conv9_prim_desc = convolution_forward::primitive_desc(conv9_desc, eng);
-
-        // Check if data and weights format required by convolution is different 
-        // from the user format, if so reorder the memory layout
-        auto conv9_src_memory = conv8_dst_memory;
-        if (conv9_prim_desc.src_desc() != conv9_src_memory.get_desc()) {
-        conv9_src_memory = memory(conv9_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv8_dst_memory, conv9_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv8_dst_memory},
-                {DNNL_ARG_TO, conv9_src_memory}});
-        }
-
-        auto conv9_weights_memory = conv9_user_weights_memory;
-        if (conv9_prim_desc.weights_desc() != conv9_user_weights_memory.get_desc()) {
-        conv9_weights_memory = memory(conv9_prim_desc.weights_desc(), eng);
-        reorder(conv9_user_weights_memory, conv9_weights_memory)
-                .execute(s, conv9_user_weights_memory, conv9_weights_memory);
-        }
-
-        // Create memory for output
-        auto conv9_dst_memory = memory(conv9_prim_desc.dst_desc(),eng);
-
-        // Create the convolution primitive
-        net.push_back(convolution_forward(conv9_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv9_src_memory},
-        {DNNL_ARG_WEIGHTS, conv9_weights_memory},
-        {DNNL_ARG_BIAS, conv9_user_bias_memory},
-        {DNNL_ARG_DST, conv9_dst_memory}});
+        // Create convolutional layer
+        std::tuple<primitive, std::unordered_map<int, memory>> conv9 = create_convolution_layer(eng, s, conv8_dst_memory, conv9_src_tz, 
+                conv9_weights_tz, conv9_bias_tz, conv9_dst_tz, conv9_strides, conv9_padding, conv9_weights.data(), conv9_bias.data());
+        auto conv9_dst_memory = std::get<1>(conv9).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(conv9));
+        net_args.push_back(std::get<1>(conv9));
 
         // -----------------------------------------------------------
         // ReLu9
@@ -848,54 +470,12 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> conv10_weights(product(conv10_weights_tz));
         std::vector<float> conv10_bias(product(conv10_bias_tz));
 
-        // Create user memory
-        auto conv10_user_weights_memory
-        = memory({{conv10_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(conv10_weights.data(), conv10_user_weights_memory);
-        auto conv10_user_bias_memory
-        = memory({{conv10_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(conv10_bias.data(), conv10_user_bias_memory);
-
-        // Create convolution memory descriptors with format_tag::any
-        auto conv10_src_md = memory::desc({conv10_src_tz}, dt::f32, tag::any);
-        auto conv10_weights_md = memory::desc({conv10_weights_tz}, dt::f32, tag::any);
-        auto conv10_bias_md = memory::desc({conv10_bias_tz}, dt::f32, tag::any);
-        auto conv10_dst_md = memory::desc({conv10_dst_tz}, dt::f32, tag::any);
-
-        // Create convolution descriptor
-        auto conv10_desc = convolution_forward::desc(prop_kind::forward_inference,
-        algorithm::convolution_direct, conv10_src_md, conv10_weights_md,
-        conv10_bias_md, conv10_dst_md, conv10_strides, conv10_padding, conv10_padding);
-
-        // Create convolution primitive descriptor 
-        auto conv10_prim_desc = convolution_forward::primitive_desc(conv10_desc, eng);
-
-        // Check if data and weights format required by convolution is different 
-        // from the user format, if so reorder the memory layout
-        auto conv10_src_memory = conv9_dst_memory;
-        if (conv10_prim_desc.src_desc() != conv10_src_memory.get_desc()) {
-        conv10_src_memory = memory(conv10_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv9_dst_memory, conv10_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv9_dst_memory},
-                {DNNL_ARG_TO, conv10_src_memory}});
-        }
-
-        auto conv10_weights_memory = conv10_user_weights_memory;
-        if (conv10_prim_desc.weights_desc() != conv10_user_weights_memory.get_desc()) {
-        conv10_weights_memory = memory(conv10_prim_desc.weights_desc(), eng);
-        reorder(conv10_user_weights_memory, conv10_weights_memory)
-                .execute(s, conv10_user_weights_memory, conv10_weights_memory);
-        }
-
-        // Create memory for output
-        auto conv10_dst_memory = memory(conv10_prim_desc.dst_desc(),eng);
-
-        // Create the convolution primitive
-        net.push_back(convolution_forward(conv10_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv10_src_memory},
-        {DNNL_ARG_WEIGHTS, conv10_weights_memory},
-        {DNNL_ARG_BIAS, conv10_user_bias_memory},
-        {DNNL_ARG_DST, conv10_dst_memory}});
+        // Create convolutional layer
+        std::tuple<primitive, std::unordered_map<int, memory>> conv10 = create_convolution_layer(eng, s, conv9_dst_memory, conv10_src_tz, 
+                conv10_weights_tz, conv10_bias_tz, conv10_dst_tz, conv10_strides, conv10_padding, conv10_weights.data(), conv10_bias.data());
+        auto conv10_dst_memory = std::get<1>(conv10).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(conv10));
+        net_args.push_back(std::get<1>(conv10));
 
         // -----------------------------------------------------------
         // ReLu10
@@ -941,54 +521,12 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> conv11_weights(product(conv11_weights_tz));
         std::vector<float> conv11_bias(product(conv11_bias_tz));
 
-        // Create user memory
-        auto conv11_user_weights_memory
-        = memory({{conv11_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(conv11_weights.data(), conv11_user_weights_memory);
-        auto conv11_user_bias_memory
-        = memory({{conv11_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(conv11_bias.data(), conv11_user_bias_memory);
-
-        // Create convolution memory descriptors with format_tag::any
-        auto conv11_src_md = memory::desc({conv11_src_tz}, dt::f32, tag::any);
-        auto conv11_weights_md = memory::desc({conv11_weights_tz}, dt::f32, tag::any);
-        auto conv11_bias_md = memory::desc({conv11_bias_tz}, dt::f32, tag::any);
-        auto conv11_dst_md = memory::desc({conv11_dst_tz}, dt::f32, tag::any);
-
-        // Create convolution descriptor
-        auto conv11_desc = convolution_forward::desc(prop_kind::forward_inference,
-        algorithm::convolution_direct, conv11_src_md, conv11_weights_md,
-        conv11_bias_md, conv11_dst_md, conv11_strides, conv11_padding, conv11_padding);
-
-        // Create convolution primitive descriptor 
-        auto conv11_prim_desc = convolution_forward::primitive_desc(conv11_desc, eng);
-
-        // Check if data and weights format required by convolution is different 
-        // from the user format, if so reorder the memory layout
-        auto conv11_src_memory = pool4_dst_memory;
-        if (conv11_prim_desc.src_desc() != conv11_src_memory.get_desc()) {
-        conv11_src_memory = memory(conv11_prim_desc.src_desc(), eng);
-        net.push_back(reorder(pool4_dst_memory, conv11_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, pool4_dst_memory},
-                {DNNL_ARG_TO, conv11_src_memory}});
-        }
-
-        auto conv11_weights_memory = conv11_user_weights_memory;
-        if (conv11_prim_desc.weights_desc() != conv11_user_weights_memory.get_desc()) {
-        conv11_weights_memory = memory(conv11_prim_desc.weights_desc(), eng);
-        reorder(conv11_user_weights_memory, conv11_weights_memory)
-                .execute(s, conv11_user_weights_memory, conv11_weights_memory);
-        }
-
-        // Create memory for output
-        auto conv11_dst_memory = memory(conv11_prim_desc.dst_desc(),eng);
-
-        // Create the convolution primitive
-        net.push_back(convolution_forward(conv11_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv11_src_memory},
-        {DNNL_ARG_WEIGHTS, conv11_weights_memory},
-        {DNNL_ARG_BIAS, conv11_user_bias_memory},
-        {DNNL_ARG_DST, conv11_dst_memory}});
+        // Create convolutional layer
+        std::tuple<primitive, std::unordered_map<int, memory>> conv11 = create_convolution_layer(eng, s, pool4_dst_memory, conv11_src_tz, 
+                conv11_weights_tz, conv11_bias_tz, conv11_dst_tz, conv11_strides, conv11_padding, conv11_weights.data(), conv11_bias.data());
+        auto conv11_dst_memory = std::get<1>(conv11).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(conv11));
+        net_args.push_back(std::get<1>(conv11));
 
         // -----------------------------------------------------------
         // ReLu11
@@ -1018,55 +556,12 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> conv12_weights(product(conv12_weights_tz));
         std::vector<float> conv12_bias(product(conv12_bias_tz));
 
-        // Create user memory
-        auto conv12_user_weights_memory
-        = memory({{conv12_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(conv12_weights.data(), conv12_user_weights_memory);
-        auto conv12_user_bias_memory
-        = memory({{conv12_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(conv12_bias.data(), conv12_user_bias_memory);
-
-        // Create convolution memory descriptors with format_tag::any
-        auto conv12_src_md = memory::desc({conv12_src_tz}, dt::f32, tag::any);
-        auto conv12_weights_md = memory::desc({conv12_weights_tz}, dt::f32, tag::any);
-        auto conv12_bias_md = memory::desc({conv12_bias_tz}, dt::f32, tag::any);
-        auto conv12_dst_md = memory::desc({conv12_dst_tz}, dt::f32, tag::any);
-
-
-        // Create convolution descriptor
-        auto conv12_desc = convolution_forward::desc(prop_kind::forward_inference,
-        algorithm::convolution_direct, conv12_src_md, conv12_weights_md,
-        conv12_bias_md, conv12_dst_md, conv12_strides, conv12_padding, conv12_padding);
-
-        // Create convolution primitive descriptor 
-        auto conv12_prim_desc = convolution_forward::primitive_desc(conv12_desc, eng);
-
-        // Check if data and weights format required by convolution is different 
-        // from the user format, if so reorder the memory layout
-        auto conv12_src_memory = conv11_dst_memory;
-        if (conv12_prim_desc.src_desc() != conv12_src_memory.get_desc()) {
-        conv12_src_memory = memory(conv12_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv11_dst_memory, conv12_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv11_dst_memory},
-                {DNNL_ARG_TO, conv12_src_memory}});
-        }
-
-        auto conv12_weights_memory = conv12_user_weights_memory;
-        if (conv12_prim_desc.weights_desc() != conv12_user_weights_memory.get_desc()) {
-        conv12_weights_memory = memory(conv12_prim_desc.weights_desc(), eng);
-        reorder(conv12_user_weights_memory, conv12_weights_memory)
-                .execute(s, conv12_user_weights_memory, conv12_weights_memory);
-        }
-
-        // Create memory for output
-        auto conv12_dst_memory = memory(conv12_prim_desc.dst_desc(),eng);
-
-        // Create the convolution primitive
-        net.push_back(convolution_forward(conv12_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv12_src_memory},
-        {DNNL_ARG_WEIGHTS, conv12_weights_memory},
-        {DNNL_ARG_BIAS, conv12_user_bias_memory},
-        {DNNL_ARG_DST, conv12_dst_memory}});
+        // Create convolutional layer
+        std::tuple<primitive, std::unordered_map<int, memory>> conv12 = create_convolution_layer(eng, s, conv11_dst_memory, conv12_src_tz, 
+                conv12_weights_tz, conv12_bias_tz, conv12_dst_tz, conv12_strides, conv12_padding, conv12_weights.data(), conv12_bias.data());
+        auto conv12_dst_memory = std::get<1>(conv12).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(conv12));
+        net_args.push_back(std::get<1>(conv12));
 
         // -----------------------------------------------------------
         // ReLu12
@@ -1091,55 +586,13 @@ void VGG16(engine::kind engine_kind){
         std::vector<float> conv13_weights(product(conv13_weights_tz));
         std::vector<float> conv13_bias(product(conv13_bias_tz));
 
-        // Create user memory
-        auto conv13_user_weights_memory
-        = memory({{conv13_weights_tz}, dt::f32, tag::oihw}, eng);
-        write_to_dnnl_memory(conv13_weights.data(), conv13_user_weights_memory);
-        auto conv13_user_bias_memory
-        = memory({{conv13_bias_tz}, dt::f32, tag::x}, eng);
-        write_to_dnnl_memory(conv13_bias.data(), conv13_user_bias_memory);
-
-        // Create convolution memory descriptors with format_tag::any
-        auto conv13_src_md = memory::desc({conv13_src_tz}, dt::f32, tag::any);
-        auto conv13_weights_md = memory::desc({conv13_weights_tz}, dt::f32, tag::any);
-        auto conv13_bias_md = memory::desc({conv13_bias_tz}, dt::f32, tag::any);
-        auto conv13_dst_md = memory::desc({conv13_dst_tz}, dt::f32, tag::any);
-
-        // Create convolution descriptor
-        auto conv13_desc = convolution_forward::desc(prop_kind::forward_inference,
-        algorithm::convolution_direct, conv13_src_md, conv13_weights_md,
-        conv13_bias_md, conv13_dst_md, conv13_strides, conv13_padding, conv13_padding);
-
-        // Create convolution primitive descriptor 
-        auto conv13_prim_desc = convolution_forward::primitive_desc(conv13_desc, eng);
-
-        // Check if data and weights format required by convolution is different 
-        // from the user format, if so reorder the memory layout
-        auto conv13_src_memory = conv12_dst_memory;
-        if (conv13_prim_desc.src_desc() != conv13_src_memory.get_desc()) {
-        conv13_src_memory = memory(conv13_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv12_dst_memory, conv13_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv12_dst_memory},
-                {DNNL_ARG_TO, conv13_src_memory}});
-        }
-
-        auto conv13_weights_memory = conv13_user_weights_memory;
-        if (conv13_prim_desc.weights_desc() != conv13_user_weights_memory.get_desc()) {
-        conv13_weights_memory = memory(conv13_prim_desc.weights_desc(), eng);
-        reorder(conv13_user_weights_memory, conv13_weights_memory)
-                .execute(s, conv13_user_weights_memory, conv13_weights_memory);
-        }
-
-        // Create memory for output
-        auto conv13_dst_memory = memory(conv13_prim_desc.dst_desc(),eng);
-
-        // Create the convolution primitive
-        net.push_back(convolution_forward(conv13_prim_desc));
-        net_args.push_back({{DNNL_ARG_SRC, conv13_src_memory},
-        {DNNL_ARG_WEIGHTS, conv13_weights_memory},
-        {DNNL_ARG_BIAS, conv13_user_bias_memory},
-        {DNNL_ARG_DST, conv13_dst_memory}});
-
+        // Create convolutional layer
+        std::tuple<primitive, std::unordered_map<int, memory>> conv13 = create_convolution_layer(eng, s, conv12_dst_memory, conv13_src_tz, 
+                conv13_weights_tz, conv13_bias_tz, conv13_dst_tz, conv13_strides, conv13_padding, conv13_weights.data(), conv13_bias.data());
+        auto conv13_dst_memory = std::get<1>(conv13).at(DNNL_ARG_DST);
+        net.push_back(std::get<0>(conv13));
+        net_args.push_back(std::get<1>(conv13));
+        
         // -----------------------------------------------------------
         // ReLu13
         std::cout << "ReLu13" << std::endl;
