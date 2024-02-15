@@ -13,6 +13,7 @@ using namespace dnnl;
 
 // In comparison with AlexNet, VGG16 does not LRN, local response normalization
 // VGG16 D configuration
+// A procedural version of VGG16
 void VGG16(engine::kind engine_kind){
         std::cout << "Entered VGG16" << std::endl;
         using tag = memory::format_tag;
@@ -46,10 +47,10 @@ void VGG16(engine::kind engine_kind){
         memory::dims conv1_dst_tz = {batch, 64, input_H, input_W};
         memory::dims conv1_strides = {conv_stride, conv_stride};
         memory::dims conv1_padding = {padding, padding};
-
+        
         // Allocate buffers for input data and weights, and create memory descriptors
         std::vector<float> user_src(batch * input_channels * input_H * input_W);
-        //std::vector<float> user_dst(batch * 64 * input_H * input_W);
+        std::vector<float> user_dst(batch * 64 * input_H * input_W);
         std::vector<float> user_dst(batch*1000);
         std::vector<float> conv1_weights(product(conv1_weights_tz));
         std::vector<float> conv1_bias(product(conv1_bias_tz));
@@ -104,7 +105,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv1_weights_memory},
         {DNNL_ARG_BIAS, conv1_user_bias_memory},
         {DNNL_ARG_DST, conv1_dst_memory}});
-
+        
         // -----------------------------------------------------------
         // ReLu1
         std::cout << "ReLu1" << std::endl;
