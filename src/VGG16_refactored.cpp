@@ -82,6 +82,30 @@ std::tuple<primitive, std::unordered_map<int, memory>> create_activation_layer(
     
     return {eltwise_forward(relu_pd), relu_args};
 }
+
+// Helper function to execute a max pooling layer
+std::tuple<primitive, std::unordered_map<int, memory>> create_max_pooling_layer(
+    engine& eng, const memory& src, const memory::dims& dst_tz, const memory::dims& kernel,
+    const memory::dims& strides, const memory::dims& padding) {
+    
+    // Output memory
+    auto pool_dst_md = memory::desc({dst_tz}, memory::data_type::f32, memory::format_tag::any);
+    auto pool_dst_memory = memory(pool_dst_md, eng);
+    
+    // Pooling descriptor
+    auto pool_desc = pooling_forward::desc(prop_kind::forward_inference,
+        algorithm::pooling_max, src.get_desc(), pool_dst_md,
+        strides, kernel, padding, padding);
+    auto pool_pd = pooling_forward::primitive_desc(pool_desc, eng);
+    
+    // Arguments for the pooling primitive
+    std::unordered_map<int, memory> pool_args = {
+        {DNNL_ARG_SRC, src},
+        {DNNL_ARG_DST, pool_dst_memory}
+    };
+    
+    return {pooling_forward(pool_pd), pool_args};
+}
 // CPU engine implementation
 
 // In comparison with AlexNet, VGG16 does not LRN, local response normalization
