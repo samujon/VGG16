@@ -164,10 +164,13 @@ void VGG16(engine::kind engine_kind){
         auto conv2_src_memory = conv1_dst_memory;
         if (conv2_prim_desc.src_desc() != conv2_src_memory.get_desc()) {
         conv2_src_memory = memory(conv2_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv1_dst_memory, conv2_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv1_dst_memory},
-                {DNNL_ARG_TO, conv2_src_memory}});
+        //net.push_back(reorder(conv1_dst_memory, conv2_src_memory));
+        //net_args.push_back({{DNNL_ARG_FROM, conv1_dst_memory},
+        //        {DNNL_ARG_TO, conv2_src_memory}});
+        reorder(conv1_dst_memory, conv2_src_memory)
+                .execute(s, conv1_dst_memory, conv2_src_memory);
         }
+        std::cout << net.size() << " extra layer?" << std::endl;
 
         auto conv2_weights_memory = conv2_user_weights_memory;
         if (conv2_prim_desc.weights_desc() != conv2_user_weights_memory.get_desc()) {
