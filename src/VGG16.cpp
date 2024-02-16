@@ -105,7 +105,8 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv1_weights_memory},
         {DNNL_ARG_BIAS, conv1_user_bias_memory},
         {DNNL_ARG_DST, conv1_dst_memory}});
-        
+        std::cout << net.size() << std::endl;
+
         // -----------------------------------------------------------
         // ReLu1
         std::cout << "ReLu1" << std::endl;
@@ -120,6 +121,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu1_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv1_dst_memory},
         {DNNL_ARG_DST, conv1_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 2: 224x224x64
@@ -183,7 +185,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv2_weights_memory},
         {DNNL_ARG_BIAS, conv2_user_bias_memory},
         {DNNL_ARG_DST, conv2_dst_memory}});
-
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu2
@@ -202,6 +204,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu2_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv2_dst_memory},
         {DNNL_ARG_DST, conv2_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // max pooling layer 1: 112x112
@@ -225,6 +228,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(pooling_forward(pool1_pd));
         net_args.push_back({{DNNL_ARG_SRC, conv2_dst_memory},
         {DNNL_ARG_DST, pool1_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 3: 112x112x128
@@ -287,6 +291,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv3_weights_memory},
         {DNNL_ARG_BIAS, conv3_user_bias_memory},
         {DNNL_ARG_DST, conv3_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu3
@@ -302,6 +307,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu3_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv3_dst_memory},
         {DNNL_ARG_DST, conv3_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // Convolutional layer 4: 112x112x128
@@ -365,6 +371,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv4_weights_memory},
         {DNNL_ARG_BIAS, conv4_user_bias_memory},
         {DNNL_ARG_DST, conv4_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu4
@@ -380,6 +387,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu4_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv4_dst_memory},
         {DNNL_ARG_DST, conv4_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // max pooling layer 2: 56x56
@@ -401,7 +409,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(pooling_forward(pool2_pd));
         net_args.push_back({{DNNL_ARG_SRC, conv4_dst_memory},
         {DNNL_ARG_DST, pool2_dst_memory}});
-
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 5: 56x56x256
@@ -464,6 +472,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv5_weights_memory},
         {DNNL_ARG_BIAS, conv5_user_bias_memory},
         {DNNL_ARG_DST, conv5_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu5
@@ -479,6 +488,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu5_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv5_dst_memory},
         {DNNL_ARG_DST, conv5_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 6: 56x56x256
@@ -541,6 +551,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv6_weights_memory},
         {DNNL_ARG_BIAS, conv6_user_bias_memory},
         {DNNL_ARG_DST, conv6_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu6
@@ -556,6 +567,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu6_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv6_dst_memory},
         {DNNL_ARG_DST, conv6_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 7: 56x56x256
@@ -618,6 +630,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv7_weights_memory},
         {DNNL_ARG_BIAS, conv7_user_bias_memory},
         {DNNL_ARG_DST, conv7_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu7
@@ -633,6 +646,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu7_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv7_dst_memory},
         {DNNL_ARG_DST, conv7_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // max pooling layer 3: 28x28x256
@@ -654,6 +668,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(pooling_forward(pool3_pd));
         net_args.push_back({{DNNL_ARG_SRC, conv7_dst_memory},
         {DNNL_ARG_DST, pool3_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 8: 28x28x512
@@ -716,6 +731,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv8_weights_memory},
         {DNNL_ARG_BIAS, conv8_user_bias_memory},
         {DNNL_ARG_DST, conv8_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu8
@@ -731,7 +747,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu8_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv8_dst_memory},
         {DNNL_ARG_DST, conv8_dst_memory}});
-
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 9: 28x28x512
@@ -794,6 +810,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv9_weights_memory},
         {DNNL_ARG_BIAS, conv9_user_bias_memory},
         {DNNL_ARG_DST, conv9_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu9
@@ -809,7 +826,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu9_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv9_dst_memory},
         {DNNL_ARG_DST, conv9_dst_memory}});
-
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 10: 28x28x512
@@ -872,6 +889,8 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv10_weights_memory},
         {DNNL_ARG_BIAS, conv10_user_bias_memory},
         {DNNL_ARG_DST, conv10_dst_memory}});
+        std::cout << net.size() << std::endl;
+
 
         // -----------------------------------------------------------
         // ReLu10
@@ -887,6 +906,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu10_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv10_dst_memory},
         {DNNL_ARG_DST, conv10_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // max pooling layer 4: 14x14x512
@@ -908,6 +928,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(pooling_forward(pool4_pd));
         net_args.push_back({{DNNL_ARG_SRC, conv10_dst_memory},
         {DNNL_ARG_DST, pool4_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 11: 14x14x512
@@ -970,6 +991,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv11_weights_memory},
         {DNNL_ARG_BIAS, conv11_user_bias_memory},
         {DNNL_ARG_DST, conv11_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu11
@@ -985,6 +1007,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu11_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv11_dst_memory},
         {DNNL_ARG_DST, conv11_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 12: 14x14x512
@@ -1048,6 +1071,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv12_weights_memory},
         {DNNL_ARG_BIAS, conv12_user_bias_memory},
         {DNNL_ARG_DST, conv12_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu12
@@ -1063,6 +1087,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu12_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv12_dst_memory},
         {DNNL_ARG_DST, conv12_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 13: 14x14x512
@@ -1125,6 +1150,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, conv13_weights_memory},
         {DNNL_ARG_BIAS, conv13_user_bias_memory},
         {DNNL_ARG_DST, conv13_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu13
@@ -1140,6 +1166,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu13_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv13_dst_memory},
         {DNNL_ARG_DST, conv13_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // max pooling layer 5: 7x7x512
@@ -1161,6 +1188,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(pooling_forward(pool5_pd));
         net_args.push_back({{DNNL_ARG_SRC, conv13_dst_memory},
         {DNNL_ARG_DST, pool5_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // fully connected layer 1: 4096
@@ -1217,6 +1245,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, fc1_weights_memory},
         {DNNL_ARG_BIAS, fc1_user_bias_memory},
         {DNNL_ARG_DST, fc1_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu14
@@ -1232,6 +1261,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu14_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, fc1_dst_memory},
         {DNNL_ARG_DST, fc1_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // fully connected layer 2: 4096
@@ -1287,6 +1317,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, fc2_weights_memory},
         {DNNL_ARG_BIAS, fc2_user_bias_memory},
         {DNNL_ARG_DST, fc2_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu15
@@ -1302,6 +1333,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu15_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, fc2_dst_memory},
         {DNNL_ARG_DST, fc2_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // fully connected layer 3: 1000
@@ -1359,6 +1391,7 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_WEIGHTS, fc3_weights_memory},
         {DNNL_ARG_BIAS, fc3_user_bias_memory},
         {DNNL_ARG_DST, fc3_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu16
@@ -1374,7 +1407,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu16_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, fc3_dst_memory},
         {DNNL_ARG_DST, fc3_dst_memory}});
-
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // Softmax
@@ -1384,7 +1417,7 @@ void VGG16(engine::kind engine_kind){
         auto softmax_prim_desc = softmax_forward::primitive_desc(softmax_desc, eng);
         auto softmax_dst_memory = memory(softmax_prim_desc.dst_desc(), eng);
         softmax_forward softmax_prim(softmax_prim_desc);
-        auto user_dst_memory = memory({{batch, 1000}, dt::f32, tag::nc}, eng);
+        //auto user_dst_memory = memory({{batch, 1000}, dt::f32, tag::nc}, eng);
 
         // Execute softmax
         softmax_prim.execute(s, {{DNNL_ARG_SRC, fc3_dst_memory},
@@ -1394,6 +1427,7 @@ void VGG16(engine::kind engine_kind){
                 net_args.push_back({{DNNL_ARG_FROM, softmax_dst_memory},
                 {DNNL_ARG_TO, user_dst_memory}});
         }
+        
         // -----------------------------------------------------------
         // Execute model
         std::cout << "Execute model" << std::endl;
