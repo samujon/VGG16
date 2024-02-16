@@ -164,13 +164,9 @@ void VGG16(engine::kind engine_kind){
         auto conv2_src_memory = conv1_dst_memory;
         if (conv2_prim_desc.src_desc() != conv2_src_memory.get_desc()) {
         conv2_src_memory = memory(conv2_prim_desc.src_desc(), eng);
-        //net.push_back(reorder(conv1_dst_memory, conv2_src_memory));
-        //net_args.push_back({{DNNL_ARG_FROM, conv1_dst_memory},
-        //        {DNNL_ARG_TO, conv2_src_memory}});
         reorder(conv1_dst_memory, conv2_src_memory)
                 .execute(s, conv1_dst_memory, conv2_src_memory);
         }
-        std::cout << net.size() << " extra layer?" << std::endl;
 
         auto conv2_weights_memory = conv2_user_weights_memory;
         if (conv2_prim_desc.weights_desc() != conv2_user_weights_memory.get_desc()) {
@@ -273,9 +269,8 @@ void VGG16(engine::kind engine_kind){
         auto conv3_src_memory = pool1_dst_memory;
         if (conv3_prim_desc.src_desc() != conv3_src_memory.get_desc()) {
         conv3_src_memory = memory(conv3_prim_desc.src_desc(), eng);
-        net.push_back(reorder(pool1_dst_memory, conv3_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, pool1_dst_memory},
-                {DNNL_ARG_TO, conv3_src_memory}});
+        reorder(pool1_dst_memory, conv3_src_memory)
+                .execute(s, pool1_dst_memory, conv3_src_memory);
         }
 
         auto conv3_weights_memory = conv3_user_weights_memory;
@@ -353,9 +348,9 @@ void VGG16(engine::kind engine_kind){
         auto conv4_src_memory = conv3_dst_memory;
         if (conv4_prim_desc.src_desc() != conv4_src_memory.get_desc()) {
         conv4_src_memory = memory(conv4_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv3_dst_memory, conv4_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv3_dst_memory},
-                {DNNL_ARG_TO, conv4_src_memory}});
+        reorder(conv3_dst_memory, conv3_src_memory)
+                .execute(s, conv3_dst_memory, conv3_src_memory);
+
         }
 
         auto conv4_weights_memory = conv4_user_weights_memory;
@@ -454,9 +449,8 @@ void VGG16(engine::kind engine_kind){
         auto conv5_src_memory = pool2_dst_memory;
         if (conv5_prim_desc.src_desc() != conv5_src_memory.get_desc()) {
         conv5_src_memory = memory(conv5_prim_desc.src_desc(), eng);
-        net.push_back(reorder(pool2_dst_memory, conv5_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, pool2_dst_memory},
-                {DNNL_ARG_TO, conv5_src_memory}});
+        reorder(pool2_dst_memory, conv5_src_memory)
+                .execute(s, pool2_dst_memory, conv5_src_memory);
         }
 
         auto conv5_weights_memory = conv5_user_weights_memory;
@@ -533,9 +527,8 @@ void VGG16(engine::kind engine_kind){
         auto conv6_src_memory = conv5_dst_memory;
         if (conv6_prim_desc.src_desc() != conv6_src_memory.get_desc()) {
         conv6_src_memory = memory(conv6_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv5_dst_memory, conv6_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv5_dst_memory},
-                {DNNL_ARG_TO, conv6_src_memory}});
+        reorder(conv5_dst_memory, conv6_src_memory)
+                .execute(s, conv5_dst_memory, conv6_src_memory);
         }
 
         auto conv6_weights_memory = conv6_user_weights_memory;
@@ -612,9 +605,8 @@ void VGG16(engine::kind engine_kind){
         auto conv7_src_memory = conv6_dst_memory;
         if (conv7_prim_desc.src_desc() != conv7_src_memory.get_desc()) {
         conv7_src_memory = memory(conv7_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv6_dst_memory, conv7_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv6_dst_memory},
-                {DNNL_ARG_TO, conv7_src_memory}});
+        reorder(conv6_dst_memory, conv7_src_memory)
+                .execute(s, conv6_dst_memory, conv7_src_memory);
         }
 
         auto conv7_weights_memory = conv7_user_weights_memory;
@@ -713,9 +705,8 @@ void VGG16(engine::kind engine_kind){
         auto conv8_src_memory = pool3_dst_memory;
         if (conv8_prim_desc.src_desc() != conv8_src_memory.get_desc()) {
         conv8_src_memory = memory(conv8_prim_desc.src_desc(), eng);
-        net.push_back(reorder(pool3_dst_memory, conv8_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, pool3_dst_memory},
-                {DNNL_ARG_TO, conv8_src_memory}});
+        reorder(pool3_dst_memory, conv8_src_memory)
+                .execute(s, pool3_dst_memory, conv8_src_memory);
         }
 
         auto conv8_weights_memory = conv8_user_weights_memory;
@@ -792,9 +783,8 @@ void VGG16(engine::kind engine_kind){
         auto conv9_src_memory = conv8_dst_memory;
         if (conv9_prim_desc.src_desc() != conv9_src_memory.get_desc()) {
         conv9_src_memory = memory(conv9_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv8_dst_memory, conv9_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv8_dst_memory},
-                {DNNL_ARG_TO, conv9_src_memory}});
+        reorder(conv8_dst_memory, conv9_src_memory)
+                .execute(s, conv8_dst_memory, conv9_src_memory);
         }
 
         auto conv9_weights_memory = conv9_user_weights_memory;
@@ -871,9 +861,8 @@ void VGG16(engine::kind engine_kind){
         auto conv10_src_memory = conv9_dst_memory;
         if (conv10_prim_desc.src_desc() != conv10_src_memory.get_desc()) {
         conv10_src_memory = memory(conv10_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv9_dst_memory, conv10_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv9_dst_memory},
-                {DNNL_ARG_TO, conv10_src_memory}});
+        reorder(conv9_dst_memory, conv10_src_memory)
+                .execute(s, conv9_dst_memory, conv10_src_memory);
         }
 
         auto conv10_weights_memory = conv10_user_weights_memory;
@@ -973,9 +962,8 @@ void VGG16(engine::kind engine_kind){
         auto conv11_src_memory = pool4_dst_memory;
         if (conv11_prim_desc.src_desc() != conv11_src_memory.get_desc()) {
         conv11_src_memory = memory(conv11_prim_desc.src_desc(), eng);
-        net.push_back(reorder(pool4_dst_memory, conv11_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, pool4_dst_memory},
-                {DNNL_ARG_TO, conv11_src_memory}});
+        reorder(pool4_dst_memory, conv11_src_memory)
+                .execute(s, pool4_dst_memory, conv11_src_memory);
         }
 
         auto conv11_weights_memory = conv11_user_weights_memory;
@@ -1053,9 +1041,8 @@ void VGG16(engine::kind engine_kind){
         auto conv12_src_memory = conv11_dst_memory;
         if (conv12_prim_desc.src_desc() != conv12_src_memory.get_desc()) {
         conv12_src_memory = memory(conv12_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv11_dst_memory, conv12_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv11_dst_memory},
-                {DNNL_ARG_TO, conv12_src_memory}});
+        reorder(conv11_dst_memory, conv12_src_memory)
+                .execute(s, conv11_dst_memory, conv12_src_memory);
         }
 
         auto conv12_weights_memory = conv12_user_weights_memory;
@@ -1132,9 +1119,8 @@ void VGG16(engine::kind engine_kind){
         auto conv13_src_memory = conv12_dst_memory;
         if (conv13_prim_desc.src_desc() != conv13_src_memory.get_desc()) {
         conv13_src_memory = memory(conv13_prim_desc.src_desc(), eng);
-        net.push_back(reorder(conv12_dst_memory, conv13_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, conv12_dst_memory},
-                {DNNL_ARG_TO, conv13_src_memory}});
+        reorder(conv12_dst_memory, conv13_src_memory)
+                .execute(s, conv12_dst_memory, conv13_src_memory);
         }
 
         auto conv13_weights_memory = conv13_user_weights_memory;
@@ -1227,8 +1213,10 @@ void VGG16(engine::kind engine_kind){
         if (fc1_prim_desc.src_desc() != pool5_dst_memory.get_desc()) {
         fc1_src_memory = memory(fc1_prim_desc.src_desc(), eng);
         net.push_back(reorder(pool5_dst_memory, fc1_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, pool5_dst_memory},
-        {DNNL_ARG_TO, fc1_src_memory}});
+        net_args.push_back({{DNNL_ARG_FROM, pool5_dst_memory},{
+        DNNL_ARG_TO, fc1_src_memory}});
+        //reorder(pool5_dst_memory, fc1_src_memory)
+        //.execute(s, pool5_dst_memory, fc1_src_memory);
         }
 
         // Check if reorder needed 
@@ -1298,9 +1286,8 @@ void VGG16(engine::kind engine_kind){
         auto fc2_src_memory = fc1_dst_memory;
         if (fc2_prim_desc.src_desc() != fc1_dst_memory.get_desc()) {
         fc2_src_memory = memory(fc2_prim_desc.src_desc(), eng);
-        net.push_back(reorder(fc1_dst_memory, fc2_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, fc1_dst_memory},
-        {DNNL_ARG_TO, fc2_src_memory}});
+        reorder(fc1_dst_memory, fc2_src_memory)
+        .execute(s, fc1_dst_memory, fc2_src_memory);
         }
 
         // Check if reorder needed
@@ -1372,9 +1359,8 @@ void VGG16(engine::kind engine_kind){
         auto fc3_src_memory = fc2_dst_memory;
         if (fc3_prim_desc.src_desc() != fc2_dst_memory.get_desc()) {
         fc3_src_memory = memory(fc3_prim_desc.src_desc(), eng);
-        net.push_back(reorder(fc2_dst_memory, fc3_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, fc2_dst_memory},
-        {DNNL_ARG_TO, fc3_src_memory}});
+        reorder(fc2_dst_memory, fc3_src_memory)
+        .execute(s, fc2_dst_memory, fc3_src_memory);
         }
 
         // Check if reorder needed
