@@ -50,7 +50,7 @@ void VGG16(engine::kind engine_kind){
         
         // Allocate buffers for input data and weights, and create memory descriptors
         std::vector<float> user_src(batch * input_channels * input_H * input_W);
-        std::vector<float> user_dst(batch * 64 * input_H * input_W);
+        //std::vector<float> user_dst(batch * 64 * input_H * input_W);
         std::vector<float> user_dst(batch*1000);
         std::vector<float> conv1_weights(product(conv1_weights_tz));
         std::vector<float> conv1_bias(product(conv1_bias_tz));
@@ -195,6 +195,9 @@ void VGG16(engine::kind engine_kind){
         algorithm::eltwise_relu, conv2_dst_memory.get_desc(),
         negative2_slope);
         auto relu2_prim_desc = eltwise_forward::primitive_desc(relu2_desc, eng);
+
+        // Create memory for output
+        //auto relu2_dst_memory = memory(relu2_prim_desc.dst_desc(),eng);
 
         net.push_back(eltwise_forward(relu2_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv2_dst_memory},
@@ -1197,13 +1200,21 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_TO, fc1_src_memory}});
         }
 
+        // Check if reorder needed 
+        auto fc1_weights_memory = fc1_user_weights_memory;
+        if (fc1_prim_desc.weights_desc() != fc1_user_weights_memory.get_desc()) {
+        fc1_weights_memory = memory(fc1_prim_desc.weights_desc(), eng);
+        reorder(fc1_user_weights_memory, fc1_weights_memory)
+        .execute(s, fc1_user_weights_memory, fc1_weights_memory);
+        }
+
         // Create memory for output
         auto fc1_dst_memory = memory(fc1_prim_desc.dst_desc(), eng);
 
         // Add FC layer to the network
         net.push_back(inner_product_forward(fc1_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, fc1_src_memory},
-        {DNNL_ARG_WEIGHTS, fc1_user_weights_memory},
+        {DNNL_ARG_WEIGHTS, fc1_weights_memory},
         {DNNL_ARG_BIAS, fc1_user_bias_memory},
         {DNNL_ARG_DST, fc1_dst_memory}});
 
@@ -1259,13 +1270,21 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_TO, fc2_src_memory}});
         }
 
+        // Check if reorder needed
+        auto fc2_weights_memory = fc2_user_weights_memory;
+        if (fc2_prim_desc.weights_desc() != fc2_user_weights_memory.get_desc()) {
+        fc2_weights_memory = memory(fc2_prim_desc.weights_desc(), eng);
+        reorder(fc2_user_weights_memory, fc2_weights_memory)
+        .execute(s, fc2_user_weights_memory, fc2_weights_memory);
+        }
+        
         // Create memory for output
         auto fc2_dst_memory = memory(fc2_prim_desc.dst_desc(), eng);
 
         // Add FC layer to the network
         net.push_back(inner_product_forward(fc2_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, fc2_src_memory},
-        {DNNL_ARG_WEIGHTS, fc2_user_weights_memory},
+        {DNNL_ARG_WEIGHTS, fc2_weights_memory},
         {DNNL_ARG_BIAS, fc2_user_bias_memory},
         {DNNL_ARG_DST, fc2_dst_memory}});
 
@@ -1300,8 +1319,8 @@ void VGG16(engine::kind engine_kind){
         write_to_dnnl_memory(fc3_weights.data(), fc3_user_weights_memory);
         auto fc3_user_bias_memory = memory({{fc3_bias_tz}, dt::f32, tag::x}, eng);
         write_to_dnnl_memory(fc3_bias.data(), fc3_user_bias_memory);
-        //auto user_dst_memory = memory({{fc3_dst_tz}, dt::f32, tag::nc}, eng);
-        //write_to_dnnl_memory(user_dst.data(), user_dst_memory);
+        auto user_dst_memory = memory({{fc3_dst_tz}, dt::f32, tag::nc}, eng);
+        write_to_dnnl_memory(user_dst.data(), user_dst_memory);
 
         // Create memory descriptors for convolution data
         auto fc3_src_md = memory::desc({fc3_src_tz}, dt::f32, tag::any);
@@ -1323,13 +1342,21 @@ void VGG16(engine::kind engine_kind){
         {DNNL_ARG_TO, fc3_src_memory}});
         }
 
+        // Check if reorder needed
+        auto fc3_weights_memory = fc3_user_weights_memory;
+        if (fc3_prim_desc.weights_desc() != fc3_user_weights_memory.get_desc()) {
+        fc3_weights_memory = memory(fc3_prim_desc.weights_desc(), eng);
+        reorder(fc3_user_weights_memory, fc3_weights_memory)
+        .execute(s, fc3_user_weights_memory, fc3_weights_memory);
+        }
+
         // Create memory for output
         auto fc3_dst_memory = memory(fc3_prim_desc.dst_desc(), eng);
 
         // Add FC layer to the network
         net.push_back(inner_product_forward(fc3_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, fc3_src_memory},
-        {DNNL_ARG_WEIGHTS, fc3_user_weights_memory},
+        {DNNL_ARG_WEIGHTS, fc3_weights_memory},
         {DNNL_ARG_BIAS, fc3_user_bias_memory},
         {DNNL_ARG_DST, fc3_dst_memory}});
 
@@ -1365,7 +1392,13 @@ void VGG16(engine::kind engine_kind){
         // -----------------------------------------------------------
         // Execute model
         std::cout << "Execute model" << std::endl;
-        net.at(0).execute(s, net_args.at(0));
+        std::cout << net.size() << std::endl;
+        assert(net.size() == net_args.size() && "something is missing");
+        for (size_t i = 0; i < net.size(); ++i){
+            std::cout << "Start executing layer " << i << std::endl;
+            net.at(i).execute(s, net_args.at(i));
+            std::cout << "Executed layer " << i << std::endl;
+        }
         s.wait();
 
 }

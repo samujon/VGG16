@@ -762,7 +762,13 @@ void VGG16(engine::kind engine_kind){
         // -----------------------------------------------------------
         // Execute model
         std::cout << "Execute model" << std::endl;
-        net.at(0).execute(s, net_args.at(0));
+        std::cout << net.size() << std::endl;
+        assert(net.size() == net_args.size() && "something is missing");
+        for (size_t i = 0; i < net.size(); ++i){
+            std::cout << "Start executing layer " << i << std::endl;
+            net.at(i).execute(s, net_args.at(i));
+            std::cout << "Executed layer " << i << std::endl;
+        }
         s.wait();
 
 }
