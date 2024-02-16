@@ -1384,11 +1384,16 @@ void VGG16(engine::kind engine_kind){
         auto softmax_prim_desc = softmax_forward::primitive_desc(softmax_desc, eng);
         auto softmax_dst_memory = memory(softmax_prim_desc.dst_desc(), eng);
         softmax_forward softmax_prim(softmax_prim_desc);
+        auto user_dst_memory = memory({{batch, 1000}, dt::f32, tag::nc}, eng);
 
         // Execute softmax
         softmax_prim.execute(s, {{DNNL_ARG_SRC, fc3_dst_memory},
         {DNNL_ARG_DST, softmax_dst_memory}});
-
+        if(softmax_dst_memory != user_dst_memory){
+                net.push_back(reorder(softmax_dst_memory, user_dst_memory));
+                net_args.push_back({{DNNL_ARG_FROM, softmax_dst_memory},
+                {DNNL_ARG_TO, user_dst_memory}});
+        }
         // -----------------------------------------------------------
         // Execute model
         std::cout << "Execute model" << std::endl;
