@@ -164,13 +164,14 @@ void VGG16(engine::kind engine_kind){
         // Create user memory
         auto user_src_memory = memory({{conv1_src_tz}, dt::f32, tag::nchw}, eng);
         write_to_dnnl_memory(user_src.data(), user_src_memory);
-        
+
         // Create convolution layer
         std::tuple<primitive, std::unordered_map<int, memory>> conv1 = create_convolution_layer(eng, s, user_src_memory, conv1_src_tz, 
                 conv1_weights_tz, conv1_bias_tz, conv1_dst_tz, conv1_strides, conv1_padding, conv1_weights.data(), conv1_bias.data());
         auto conv1_dst_memory = std::get<1>(conv1).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(conv1));
         net_args.push_back(std::get<1>(conv1));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu1
@@ -181,6 +182,7 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu1 = create_activation_layer(eng, conv1_dst_memory, negative1_slope);
         net.push_back(std::get<0>(relu1));
         net_args.push_back(std::get<1>(relu1));
+        std::cout << net.size() << std::endl;
 
 
         // -----------------------------------------------------------
@@ -203,6 +205,7 @@ void VGG16(engine::kind engine_kind){
         auto conv2_dst_memory = std::get<1>(conv2).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(conv2));
         net_args.push_back(std::get<1>(conv2));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu2
@@ -213,6 +216,7 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu2 = create_activation_layer(eng, conv2_dst_memory, negative2_slope);
         net.push_back(std::get<0>(relu2));
         net_args.push_back(std::get<1>(relu2));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // max pooling layer 1: 112x112
@@ -236,6 +240,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(pooling_forward(pool1_pd));
         net_args.push_back({{DNNL_ARG_SRC, conv2_dst_memory},
         {DNNL_ARG_DST, pool1_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 3: 112x112x128
@@ -256,7 +261,8 @@ void VGG16(engine::kind engine_kind){
         auto conv3_dst_memory = std::get<1>(conv3).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(conv3));
         net_args.push_back(std::get<1>(conv3));
-        
+        std::cout << net.size() << std::endl;
+
         // -----------------------------------------------------------
         // ReLu3
         std::cout << "ReLu3" << std::endl;
@@ -266,6 +272,7 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu3 = create_activation_layer(eng, conv3_dst_memory, negative3_slope);
         net.push_back(std::get<0>(relu3));
         net_args.push_back(std::get<1>(relu3));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // Convolutional layer 4: 112x112x128
@@ -286,6 +293,7 @@ void VGG16(engine::kind engine_kind){
         auto conv4_dst_memory = std::get<1>(conv4).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(conv4));
         net_args.push_back(std::get<1>(conv4));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu4
@@ -296,6 +304,7 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu4 = create_activation_layer(eng, conv4_dst_memory, negative4_slope);
         net.push_back(std::get<0>(relu4));
         net_args.push_back(std::get<1>(relu4));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // max pooling layer 2: 56x56
@@ -317,6 +326,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(pooling_forward(pool2_pd));
         net_args.push_back({{DNNL_ARG_SRC, conv4_dst_memory},
         {DNNL_ARG_DST, pool2_dst_memory}});
+        std::cout << net.size() << std::endl;
 
 
         // -----------------------------------------------------------
@@ -338,7 +348,8 @@ void VGG16(engine::kind engine_kind){
         auto conv5_dst_memory = std::get<1>(conv5).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(conv5));
         net_args.push_back(std::get<1>(conv5));
-        
+        std::cout << net.size() << std::endl;
+
         // -----------------------------------------------------------
         // ReLu5
         std::cout << "ReLu5" << std::endl;
@@ -348,6 +359,7 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu5 = create_activation_layer(eng, conv5_dst_memory, negative5_slope);
         net.push_back(std::get<0>(relu5));
         net_args.push_back(std::get<1>(relu5));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 6: 56x56x256
@@ -368,6 +380,7 @@ void VGG16(engine::kind engine_kind){
         auto conv6_dst_memory = std::get<1>(conv6).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(conv6));
         net_args.push_back(std::get<1>(conv6));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu6
@@ -378,6 +391,7 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu6 = create_activation_layer(eng, conv6_dst_memory, negative6_slope);
         net.push_back(std::get<0>(relu6));
         net_args.push_back(std::get<1>(relu6));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 7: 56x56x256
@@ -398,6 +412,7 @@ void VGG16(engine::kind engine_kind){
         auto conv7_dst_memory = std::get<1>(conv7).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(conv7));
         net_args.push_back(std::get<1>(conv7));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu7
@@ -408,6 +423,7 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu7 = create_activation_layer(eng, conv7_dst_memory, negative7_slope);
         net.push_back(std::get<0>(relu7));
         net_args.push_back(std::get<1>(relu7));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // max pooling layer 3: 28x28x256
@@ -429,6 +445,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(pooling_forward(pool3_pd));
         net_args.push_back({{DNNL_ARG_SRC, conv7_dst_memory},
         {DNNL_ARG_DST, pool3_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 8: 28x28x512
@@ -449,6 +466,7 @@ void VGG16(engine::kind engine_kind){
         auto conv8_dst_memory = std::get<1>(conv8).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(conv8));
         net_args.push_back(std::get<1>(conv8));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu8
@@ -459,6 +477,7 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu8 = create_activation_layer(eng, conv8_dst_memory, negative8_slope);
         net.push_back(std::get<0>(relu8));
         net_args.push_back(std::get<1>(relu8));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 9: 28x28x512
@@ -479,6 +498,7 @@ void VGG16(engine::kind engine_kind){
         auto conv9_dst_memory = std::get<1>(conv9).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(conv9));
         net_args.push_back(std::get<1>(conv9));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu9
@@ -489,6 +509,7 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu9 = create_activation_layer(eng, conv9_dst_memory, negative9_slope);
         net.push_back(std::get<0>(relu9));
         net_args.push_back(std::get<1>(relu9));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 10: 28x28x512
@@ -509,6 +530,7 @@ void VGG16(engine::kind engine_kind){
         auto conv10_dst_memory = std::get<1>(conv10).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(conv10));
         net_args.push_back(std::get<1>(conv10));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu10
@@ -519,6 +541,7 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu10 = create_activation_layer(eng, conv10_dst_memory, negative10_slope);
         net.push_back(std::get<0>(relu10));
         net_args.push_back(std::get<1>(relu10));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // max pooling layer 4: 14x14x512
@@ -540,6 +563,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(pooling_forward(pool4_pd));
         net_args.push_back({{DNNL_ARG_SRC, conv10_dst_memory},
         {DNNL_ARG_DST, pool4_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 11: 14x14x512
@@ -560,6 +584,7 @@ void VGG16(engine::kind engine_kind){
         auto conv11_dst_memory = std::get<1>(conv11).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(conv11));
         net_args.push_back(std::get<1>(conv11));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu11
@@ -575,6 +600,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu11_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, conv11_dst_memory},
         {DNNL_ARG_DST, conv11_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 12: 14x14x512
@@ -595,6 +621,7 @@ void VGG16(engine::kind engine_kind){
         auto conv12_dst_memory = std::get<1>(conv12).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(conv12));
         net_args.push_back(std::get<1>(conv12));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu12
@@ -605,6 +632,7 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu12 = create_activation_layer(eng, conv12_dst_memory, negative12_slope);
         net.push_back(std::get<0>(relu12));
         net_args.push_back(std::get<1>(relu12));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // convolutional layer 13: 14x14x512
@@ -625,7 +653,8 @@ void VGG16(engine::kind engine_kind){
         auto conv13_dst_memory = std::get<1>(conv13).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(conv13));
         net_args.push_back(std::get<1>(conv13));
-        
+        std::cout << net.size() << std::endl;
+
         // -----------------------------------------------------------
         // ReLu13
         std::cout << "ReLu13" << std::endl;
@@ -635,6 +664,7 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu13 = create_activation_layer(eng, conv13_dst_memory, negative13_slope);
         net.push_back(std::get<0>(relu13));
         net_args.push_back(std::get<1>(relu13));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // max pooling layer 5: 7x7x512
@@ -656,6 +686,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(pooling_forward(pool5_pd));
         net_args.push_back({{DNNL_ARG_SRC, conv13_dst_memory},
         {DNNL_ARG_DST, pool5_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // fully connected layer 1: 4096
@@ -674,7 +705,8 @@ void VGG16(engine::kind engine_kind){
         auto fc1_dst_memory = std::get<1>(fc1).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(fc1));
         net_args.push_back(std::get<1>(fc1));
-        
+        std::cout << net.size() << std::endl;
+
         // -----------------------------------------------------------
         // ReLu14
         std::cout << "ReLu14" << std::endl;
@@ -684,6 +716,7 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu14 = create_activation_layer(eng, fc1_dst_memory, negative14_slope);
         net.push_back(std::get<0>(relu14));
         net_args.push_back(std::get<1>(relu14));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // fully connected layer 2: 4096
@@ -702,7 +735,8 @@ void VGG16(engine::kind engine_kind){
         auto fc2_dst_memory = std::get<1>(fc2).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(fc2));
         net_args.push_back(std::get<1>(fc2));
-        
+        std::cout << net.size() << std::endl;
+
         // -----------------------------------------------------------
         // ReLu15
         std::cout << "ReLu15" << std::endl;
@@ -717,6 +751,7 @@ void VGG16(engine::kind engine_kind){
         net.push_back(eltwise_forward(relu15_prim_desc));
         net_args.push_back({{DNNL_ARG_SRC, fc2_dst_memory},
         {DNNL_ARG_DST, fc2_dst_memory}});
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // fully connected layer 3: 1000
@@ -735,6 +770,7 @@ void VGG16(engine::kind engine_kind){
         auto fc3_dst_memory = std::get<1>(fc3).at(DNNL_ARG_DST);
         net.push_back(std::get<0>(fc3));
         net_args.push_back(std::get<1>(fc3));
+        std::cout << net.size() << std::endl;
 
         // -----------------------------------------------------------
         // ReLu16
@@ -745,7 +781,8 @@ void VGG16(engine::kind engine_kind){
         std::tuple<primitive, std::unordered_map<int, memory>> relu16 = create_activation_layer(eng, fc3_dst_memory, negative16_slope);
         net.push_back(std::get<0>(relu16));
         net_args.push_back(std::get<1>(relu16));
-        
+        std::cout << net.size() << std::endl;
+
         // -----------------------------------------------------------
         // Softmax
         std::cout << "Softmax" << std::endl;
@@ -754,11 +791,17 @@ void VGG16(engine::kind engine_kind){
         auto softmax_prim_desc = softmax_forward::primitive_desc(softmax_desc, eng);
         auto softmax_dst_memory = memory(softmax_prim_desc.dst_desc(), eng);
         softmax_forward softmax_prim(softmax_prim_desc);
+        auto user_dst_memory = memory({{batch, 1000}, dt::f32, tag::nc}, eng);
 
         // Execute softmax
         softmax_prim.execute(s, {{DNNL_ARG_SRC, fc3_dst_memory},
         {DNNL_ARG_DST, softmax_dst_memory}});
-
+        if(softmax_dst_memory != user_dst_memory){
+                net.push_back(reorder(softmax_dst_memory, user_dst_memory));
+                net_args.push_back({{DNNL_ARG_FROM, softmax_dst_memory},
+                {DNNL_ARG_TO, user_dst_memory}});
+        }
+            
         // -----------------------------------------------------------
         // Execute model
         std::cout << "Execute model" << std::endl;
