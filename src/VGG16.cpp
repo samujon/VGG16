@@ -83,9 +83,8 @@ void VGG16(engine::kind engine_kind){
         auto conv1_src_memory = user_src_memory;
         if (conv1_prim_desc.src_desc() != user_src_memory.get_desc()) {
         conv1_src_memory = memory(conv1_prim_desc.src_desc(), eng);
-        net.push_back(reorder(user_src_memory, conv1_src_memory));
-        net_args.push_back({{DNNL_ARG_FROM, user_src_memory},
-                {DNNL_ARG_TO, conv1_src_memory}});
+        reorder(user_src_memory, conv1_src_memory)
+                .execute(s, user_src_memory, conv1_src_memory);
         }
 
         auto conv1_weights_memory = user_weights_memory;
