@@ -1421,8 +1421,9 @@ void VGG16(engine::kind engine_kind){
         std::cout << "Execute model" << std::endl;
         assert(net.size() == net_args.size() && "something is missing");
         for (size_t i = 0; i < net.size(); ++i){
+            //std::cout << "Executing layer " << i + 1 << std::endl;
             net.at(i).execute(s, net_args.at(i));
-            std::cout << "Executed layer " << i << std::endl;
+            std::cout << "Executed layer " << i + 1 << std::endl;
         }
         s.wait();
         std::vector<float> result(1000);
