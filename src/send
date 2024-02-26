@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Define the source and destination for the scp command
+SOURCE="../build/VGG16"
+DESTINATION="root@localhost:/root/VGG16"
+
+# Define the port
+PORT=2222
+
+# Execute the scp command
+scp -P $PORT $SOURCE $DESTINATION
+
+# Check if scp was successful
+if [ $? -eq 0 ]; then
+    echo "VGG16 has been successfully copied to the destination."
+else
+    echo "Failed to copy VGG16 to the destination."
+fi
