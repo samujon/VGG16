@@ -6,9 +6,10 @@ DESTINATION="root@localhost:/root/VGG16"
 
 # Define the port
 PORT=2222
+SSH_KEY="/home/samjons/thesis/debian-rv64/dqib_riscv64-virt/ssh_user_ed25519_key" # Update this path to your SSH key location
 
 # Execute the scp command
-scp -P $PORT $SOURCE $DESTINATION
+scp -P $PORT -i $SSH_KEY $SOURCE $DESTINATION
 
 # Check if scp was successful
 if [ $? -eq 0 ]; then
