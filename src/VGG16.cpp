@@ -47,7 +47,7 @@ void VGG16(engine::kind engine_kind){
         memory::dims conv1_dst_tz = {batch, 64, input_H, input_W};
         memory::dims conv1_strides = {conv_stride, conv_stride};
         memory::dims conv1_padding = {padding, padding};
-        
+
         // Allocate buffers for input data and weights, and create memory descriptors
         std::vector<float> user_src(batch * input_channels * input_H * input_W);
         std::vector<float> user_dst(batch*1000);
@@ -63,13 +63,13 @@ void VGG16(engine::kind engine_kind){
         auto conv1_user_bias_memory
         = memory({{conv1_bias_tz}, dt::f32, tag::x}, eng);
         write_to_dnnl_memory(conv1_bias.data(), conv1_user_bias_memory);
-
+        
         // Create convolution memory descriptors with format_tag::any
         auto conv1_src_md = memory::desc({conv1_src_tz}, dt::f32, tag::any);
         auto conv1_weights_md = memory::desc({conv1_weights_tz}, dt::f32, tag::any);
         auto conv1_bias_md = memory::desc({conv1_bias_tz}, dt::f32, tag::any);
         auto conv1_dst_md = memory::desc({conv1_dst_tz}, dt::f32, tag::any);
-
+        
         // Create convolution descriptor
         auto conv1_desc = convolution_forward::desc(prop_kind::forward_inference,
         algorithm::convolution_direct, conv1_src_md, conv1_weights_md,
@@ -134,7 +134,7 @@ void VGG16(engine::kind engine_kind){
         // Allocate buffers for input data and weights, and create memory descriptors
         std::vector<float> conv2_weights(product(conv2_weights_tz));
         std::vector<float> conv2_bias(product(conv2_bias_tz));
-
+        
         // Create user memory
         auto conv2_user_weights_memory
         = memory({{conv2_weights_tz}, dt::f32, tag::oihw}, eng);
@@ -142,21 +142,19 @@ void VGG16(engine::kind engine_kind){
         auto conv2_user_bias_memory
         = memory({{conv2_bias_tz}, dt::f32, tag::x}, eng);
         write_to_dnnl_memory(conv2_bias.data(), conv2_user_bias_memory);
-
+        
         // Create convolution memory descriptors with format_tag::any
         auto conv2_src_md = memory::desc({conv2_src_tz}, dt::f32, tag::any);
         auto conv2_weights_md = memory::desc({conv2_weights_tz}, dt::f32, tag::any);
         auto conv2_bias_md = memory::desc({conv2_bias_tz}, dt::f32, tag::any);
         auto conv2_dst_md = memory::desc({conv2_dst_tz}, dt::f32, tag::any);
-
         // Create convolution descriptor
         auto conv2_desc = convolution_forward::desc(prop_kind::forward_inference,
         algorithm::convolution_direct, conv2_src_md, conv2_weights_md,
         conv2_bias_md, conv2_dst_md, conv2_strides, conv2_padding, conv2_padding);
-
+        
         // Create convolution primitive descriptor 
         auto conv2_prim_desc = convolution_forward::primitive_desc(conv2_desc, eng);
-
         // Check if data and weights format required by convolution is different 
         // from the user format, if so reorder the memory layout
         auto conv2_src_memory = conv1_dst_memory;
