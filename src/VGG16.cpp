@@ -15,6 +15,9 @@ using namespace dnnl;
 // VGG16 D configuration
 // A procedural version of VGG16
 void VGG16(engine::kind engine_kind){
+        auto begin = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count();
         std::cout << "Entered VGG16" << std::endl;
         using tag = memory::format_tag;
         using dt = memory::data_type;   
@@ -1193,7 +1196,7 @@ void VGG16(engine::kind engine_kind){
         auto fc1_dst_md = memory::desc{{fc1_dst_tz}, dt::f32, tag::any};
 
         // Create inner product (fully connected) descriptor
-        auto fc1_desc = inner_product_forward::desc(prop_kind::forward_inference,
+        auto fc1_desc = inner_product_forward::desc(prop_kind::forward,
             fc1_src_md, fc1_weights_md, fc1_bias_md, fc1_dst_md);
 
         auto fc1_prim_desc = inner_product_forward::primitive_desc(fc1_desc, eng);
@@ -1266,7 +1269,7 @@ void VGG16(engine::kind engine_kind){
         auto fc2_dst_md = memory::desc{{fc2_dst_tz}, dt::f32, tag::any};
 
         // Create inner product (fully connected) descriptor
-        auto fc2_desc = inner_product_forward::desc(prop_kind::forward_inference,
+        auto fc2_desc = inner_product_forward::desc(prop_kind::forward,
         fc2_src_md, fc2_weights_md, fc2_bias_md, fc2_dst_md);
         auto fc2_prim_desc = inner_product_forward::primitive_desc(fc2_desc, eng);
 
@@ -1303,7 +1306,7 @@ void VGG16(engine::kind engine_kind){
         const float negative15_slope = 0.0f;
 
         // Create ReLu primitive
-        auto relu15_desc = eltwise_forward::desc(prop_kind::forward_inference,
+        auto relu15_desc = eltwise_forward::desc(prop_kind::forward,
         algorithm::eltwise_relu, fc2_dst_memory.get_desc(),
         negative15_slope);
         auto relu15_prim_desc = eltwise_forward::primitive_desc(relu15_desc, eng);
@@ -1337,7 +1340,7 @@ void VGG16(engine::kind engine_kind){
         auto fc3_dst_md = memory::desc{{fc3_dst_tz}, dt::f32, tag::any};
 
         // Create inner product (fully connected) descriptor
-        auto fc3_desc = inner_product_forward::desc(prop_kind::forward_inference,
+        auto fc3_desc = inner_product_forward::desc(prop_kind::forward,
         fc3_src_md, fc3_weights_md, fc3_bias_md, fc3_dst_md);
         auto fc3_prim_desc = inner_product_forward::primitive_desc(fc3_desc, eng);
 
@@ -1387,7 +1390,7 @@ void VGG16(engine::kind engine_kind){
         // -----------------------------------------------------------
         // Softmax
         std::cout << "Softmax" << std::endl;
-        auto softmax_desc = softmax_forward::desc(prop_kind::forward_inference,
+        auto softmax_desc = softmax_forward::desc(prop_kind::forward,
         fc3_dst_memory.get_desc(), 1);
         auto softmax_prim_desc = softmax_forward::primitive_desc(softmax_desc, eng);
         auto user_dst_memory = memory(softmax_prim_desc.dst_desc(), eng);
@@ -1413,6 +1416,10 @@ void VGG16(engine::kind engine_kind){
         net_args.push_back({{DNNL_ARG_SRC, fc3_dst_memory},
         {DNNL_ARG_DST, user_dst_memory}});
         std::cout << "Layer: "<< net.size() << std::endl;
+        auto end = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count();
+        std::cout << "Time to create network:" << (end - begin)/1000.0 << "s" << std::endl;
 
         // -----------------------------------------------------------
         // Execute model
@@ -1426,7 +1433,7 @@ void VGG16(engine::kind engine_kind){
         s.wait();
         std::vector<float> result(1000);
         read_from_dnnl_memory(result.data(), user_dst_memory);
-
+        
 }
 
 int main(int argc, char **argv) {
